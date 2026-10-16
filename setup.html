@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HR Portal Setup</title>
+<style>
+body{font-family:Inter,Segoe UI,Arial,sans-serif;background:#f4f6f9;color:#1d2433;margin:0;font-size:14px}
+.w{max-width:620px;margin:30px auto;padding:0 16px}
+.c{background:#fff;border:1px solid #e2e6ee;border-radius:12px;padding:22px}
+h1{font-size:20px;margin:0 0 6px}label{display:block;font-size:12px;color:#6b7487;margin:12px 0 3px}
+input{width:100%;padding:8px 10px;border:1px solid #e2e6ee;border-radius:6px;font:inherit;box-sizing:border-box}
+button{font:inherit;cursor:pointer;border:1px solid #e2e6ee;background:#fff;padding:8px 14px;border-radius:6px;margin-right:6px}
+button.p{background:#6f2fa0;color:#fff;border-color:#6f2fa0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.m{font-size:12px;color:#6b7487;margin-top:6px}.err{color:#b42318}.ok{color:#16723a}
+textarea{width:100%;height:230px;font:12px/1.4 monospace;box-sizing:border-box;margin-top:10px}
+ol{padding-left:18px;line-height:1.6}
+</style></head><body><div class="w"><div class="c">
+<h1>HR Portal — one-time setup</h1>
+<div class="m">Creates <b>config.js</b>. Your GitHub token is encrypted with your password inside it, so the token is never stored in plain text. Everything happens in your browser.</div>
+<div class="two"><div><label>GitHub username / org</label><input id="o" placeholder="your-username"></div><div><label>Repository name</label><input id="r" placeholder="hr-portal"></div></div>
+<div class="two"><div><label>Branch</label><input id="b" value="main"></div><div><label>Data file path</label><input id="p" value="data/hr-data.json"></div></div>
+<label>Fine-grained personal access token</label><input id="t" type="password" placeholder="github_pat_…">
+<div class="m">GitHub → Settings → Developer settings → Fine-grained tokens. Repository access: <b>only this repository</b>. Permission: <b>Contents → Read and write</b>.</div>
+<div class="two"><div><label>Choose a password (min 10 chars)</label><input id="a" type="password"></div><div><label>Repeat password</label><input id="a2" type="password"></div></div>
+<div style="margin-top:16px"><button id="test">Test connection</button><button class="p" id="go">Create config.js</button></div>
+<div class="m" id="msg"></div>
+<div id="out" style="display:none">
+<textarea id="txt" readonly></textarea>
+<div style="margin-top:8px"><button id="dl" class="p">Download config.js</button><button id="cp">Copy</button></div>
+<ol><li>Put <b>config.js</b> in the repository root (replace the existing one), next to index.html.</li><li>Commit. Open the site and sign in with your password.</li></ol>
+</div></div></div>
+<script>
+const $=i=>document.getElementById(i),TE=new TextEncoder();
+const b64=u=>btoa(String.fromCharCode(...u));
+async function key(pw,salt){const km=await crypto.subtle.importKey('raw',TE.encode(pw),'PBKDF2',false,['deriveKey']);
+ return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt']);}
+function say(t,c){$('msg').textContent=t;$('msg').className='m '+(c||'');}
+$('test').onclick=async()=>{
+  say('Testing…');
+  try{
+    const r=await fetch(`https://api.github.com/repos/${$('o').value.trim()}/${$('r').value.trim()}`,{headers:{Authorization:'Bearer '+$('t').value.trim(),Accept:'application/vnd.github+json'}});
+    if(!r.ok)return say('GitHub returned '+r.status+' — check username, repository name and token.','err');
+    const j=await r.json();
+    say(j.permissions&&j.permissions.push?'Connected ✓ — token can write to this repository.':'Connected, but this token cannot write. Give it Contents: Read and write.',j.permissions&&j.permissions.push?'ok':'err');
+  }catch(e){say('Failed: '+e.message,'err');}
+};
+$('go').onclick=async()=>{
+  const o=$('o').value.trim(),r=$('r').value.trim(),t=$('t').value.trim(),a=$('a').value;
+  if(!o||!r||!t)return say('Fill in username, repository and token.','err');
+  if(a.length<10)return say('Password must be at least 10 characters.','err');
+  if(a!==$('a2').value)return say('Passwords do not match.','err');
+  const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},await key(a,salt),TE.encode(JSON.stringify({t}))));
+  const cfg={owner:o,repo:r,branch:$('b').value.trim()||'main',path:$('p').value.trim()||'data/hr-data.json',token:{v:1,salt:b64(salt),iv:b64(iv),ct:b64(ct)}};
+  $('txt').value='window.HR_CONFIG = '+JSON.stringify(cfg,null,2)+';\n';
+  $('out').style.display='';say('config.js created. Your token is not included in plain text.','ok');
+};
+$('dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('txt').value],{type:'text/javascript'}));a.download='config.js';a.click();};
+$('cp').onclick=()=>{$('txt').select();document.execCommand('copy');};
+</script></body></html>
