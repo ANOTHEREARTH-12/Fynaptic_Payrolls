@@ -244,6 +244,22 @@ dialog::backdrop{background:rgba(20,20,30,.45)}
   </div>
 </div></dialog>
 
+<dialog id="incDlg"><div class="dlg">
+  <h1 id="incTitle">Increment</h1>
+  <div class="two">
+    <div><label>Effective from month *</label><input type="month" id="incMonth"></div>
+    <div><label>Note (optional)</label><input type="text" id="incNote" placeholder="e.g. Annual appraisal 2026"></div>
+  </div>
+  <div class="tw" style="margin-top:12px"><table class="t" id="incTbl"></table></div>
+  <div class="msg">Enter the fixed amount to <b>add</b> to each earning per month. Payslips before the effective month keep the old salary.</div>
+  <div class="err" id="incErr"></div>
+  <div class="row" style="justify-content:flex-end;margin:8px 0 14px">
+    <button type="button" id="incCancel">Close</button><button type="button" class="primary" id="incSave">Add increment</button>
+  </div>
+  <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);margin:0 0 8px">Increment history</h2>
+  <div class="tw"><table class="t" id="incHist"></table></div>
+</div></dialog>
+
 <div id="stage"></div>
 
 <script>
@@ -409,9 +425,18 @@ function openBal(e,mk){
   return b;
 }
 const calc=(e,mk)=>mc(e,mk,openBal(e,mk));
+/* salary as of a month = base salary + all increments effective on/before that month */
+function salaryFor(e,mk,strict){
+  const out=(e.earn||[]).map(x=>({n:x.n,a:num(x.a)}));
+  (e.incs||[]).slice().sort((a,b)=>a.m<b.m?-1:a.m>b.m?1:0).forEach(r=>{
+    if(strict?r.m>=mk:r.m>mk)return;
+    r.ch.forEach(c=>{const l=out.find(x=>x.n===c.n);if(l)l.a+=num(c.a);else out.push({n:c.n,a:num(c.a)});});
+  });
+  return out;
+}
 function pay(e,mk){
   const c=calc(e,mk);
-  const earn=(e.earn||[]).map(x=>[x.n,Math.round(num(x.a)*c.factor)]);
+  const earn=salaryFor(e,mk).map(x=>[x.n,Math.round(x.a*c.factor)]);
   const ded=(e.ded||[]).map(x=>[x.n,Math.round(num(x.a))]);
   const gross=earn.reduce((s,x)=>s+x[1],0),td=ded.reduce((s,x)=>s+x[1],0);
   return {c,earn,ded,gross,td,net:c.joined?gross-td:0};
@@ -471,11 +496,11 @@ $('fillBtn').onclick=()=>{
 let editing=null;
 function renderEmp(){
   const mk=ymOf(new Date());
-  let h='<tr><th>ID</th><th>Name</th><th>Department</th><th>Designation</th><th>Joined</th><th class="n">Gross / month</th><th class="n">Leave balance</th><th></th></tr>';
+  let h='<tr><th>ID</th><th>Name</th><th>Department</th><th>Designation</th><th>Joined</th><th class="n">Gross / month (now)</th><th class="n">Leave balance</th><th></th></tr>';
   D.employees.forEach(e=>{
-    const g=(e.earn||[]).reduce((s,x)=>s+num(x.a),0);
+    const g=salaryFor(e,mk).reduce((s,x)=>s+x.a,0);
     h+=`<tr><td>${esc(e.id)}</td><td>${esc(e.name)}</td><td>${esc(e.dept)}</td><td>${esc(e.desig)}</td><td>${esc(dmy(e.doj))}</td><td class="n">${inr(g)}</td><td class="n">${fd(calc(e,mk).open)}</td>
-      <td class="n"><button data-ed="${esc(e.id)}">Edit</button> <button class="danger" data-del="${esc(e.id)}">Delete</button></td></tr>`;
+      <td class="n"><button data-inc="${esc(e.id)}">Increment</button> <button data-ed="${esc(e.id)}">Edit</button> <button class="danger" data-del="${esc(e.id)}">Delete</button></td></tr>`;
   });
   if(!D.employees.length)h+='<tr><td colspan="8" style="padding:30px;color:#6b7487">No employees yet — click “Add employee”.</td></tr>';
   $('empTbl').innerHTML=h;
@@ -519,6 +544,7 @@ $('empSave').onclick=()=>{
 };
 $('empTbl').addEventListener('click',ev=>{
   const b=ev.target.closest('button');if(!b)return;
+  if(b.dataset.inc)openInc(D.employees.find(x=>x.id===b.dataset.inc));
   if(b.dataset.ed)openDlg(D.employees.find(x=>x.id===b.dataset.ed));
   if(b.dataset.del){
     const e=D.employees.find(x=>x.id===b.dataset.del);
@@ -527,6 +553,59 @@ $('empTbl').addEventListener('click',ev=>{
     }
   }
 });
+
+/* ---------- increments ---------- */
+let incEmp=null;
+function openInc(e){
+  incEmp=e;$('incErr').textContent='';$('incTitle').textContent='Increment — '+e.name+' ('+e.id+')';
+  $('incMonth').value=ymOf(new Date());$('incNote').value='';
+  renderIncTbl();renderIncHist();$('incDlg').showModal();
+}
+function renderIncTbl(){
+  const mk=$('incMonth').value||ymOf(new Date());
+  const cur=salaryFor(incEmp,mk,true);
+  let h='<tr><th>Earning</th><th class="n">Current (₹)</th><th class="n">Increase by (₹)</th><th class="n">New (₹)</th></tr>';
+  cur.forEach((x,i)=>{h+=`<tr><td>${esc(x.n)}</td><td class="n">${inr(x.a)}</td><td class="n"><input type="number" min="0" class="incIn" data-i="${i}" data-a="${x.a}" style="width:110px;text-align:right" placeholder="0"></td><td class="n" id="incNew${i}">${inr(x.a)}</td></tr>`;});
+  h+=`<tr><td><input type="text" id="incNewName" placeholder="New component (optional)" style="width:190px"></td><td class="n">–</td><td class="n"><input type="number" min="0" id="incNewAmt" style="width:110px;text-align:right" placeholder="0"></td><td class="n" id="incNewTot">–</td></tr>`;
+  h+=`<tr class="tot"><td>Total gross</td><td class="n" id="incG0">${inr(cur.reduce((s,x)=>s+x.a,0))}</td><td class="n" id="incGd">0</td><td class="n" id="incG1">${inr(cur.reduce((s,x)=>s+x.a,0))}</td></tr>`;
+  $('incTbl').innerHTML=h;
+  $('incTbl').dataset.g0=cur.reduce((s,x)=>s+x.a,0);
+}
+function incTotals(){
+  let d=0;
+  $('incTbl').querySelectorAll('.incIn').forEach(inp=>{const v=num(inp.value);d+=v;$('incNew'+inp.dataset.i).textContent=inr(num(inp.dataset.a)+v);});
+  const na=num($('incNewAmt').value);d+=na;$('incNewTot').textContent=na?inr(na):'–';
+  $('incGd').textContent=inr(d);$('incG1').textContent=inr(num($('incTbl').dataset.g0)+d);
+}
+$('incTbl').addEventListener('input',incTotals);
+$('incMonth').onchange=renderIncTbl;
+function renderIncHist(){
+  const incs=(incEmp.incs||[]).slice().sort((a,b)=>a.m<b.m?-1:1);
+  let h='<tr><th>Effective</th><th>Change</th><th class="n">Gross after</th><th>Note</th><th></th></tr>';
+  if(!incs.length)h+='<tr><td colspan="5" style="color:#6b7487">No increments yet.</td></tr>';
+  incs.forEach(r=>{
+    const g=salaryFor(incEmp,r.m).reduce((s,x)=>s+x.a,0);
+    h+=`<tr><td>${monthName(r.m)} ${r.m.slice(0,4)}</td><td>${r.ch.map(c=>esc(c.n)+' +'+inr(num(c.a))).join(', ')}</td><td class="n">${inr(g)}</td><td>${esc(r.note||'')}</td><td class="n"><button class="danger" data-delinc="${incs.indexOf(r)}">Remove</button></td></tr>`;
+  });
+  $('incHist').innerHTML=h;
+}
+$('incSave').onclick=()=>{
+  const m=$('incMonth').value;if(!m){$('incErr').textContent='Choose the effective month.';return;}
+  const ch=[];const cur=salaryFor(incEmp,m,true);
+  $('incTbl').querySelectorAll('.incIn').forEach(inp=>{const v=num(inp.value);if(v>0)ch.push({n:cur[+inp.dataset.i].n,a:v});});
+  const nn=$('incNewName').value.trim(),na=num($('incNewAmt').value);
+  if(nn&&na>0)ch.push({n:nn,a:na});
+  if(!ch.length){$('incErr').textContent='Enter an increase amount for at least one earning.';return;}
+  (incEmp.incs=incEmp.incs||[]).push({m,ch,note:$('incNote').value.trim()});
+  touch();$('incErr').textContent='';$('incNote').value='';renderIncTbl();renderIncHist();renderEmp();
+};
+$('incHist').addEventListener('click',ev=>{
+  const b=ev.target.closest('button[data-delinc]');if(!b)return;
+  const sorted=incEmp.incs.slice().sort((a,b)=>a.m<b.m?-1:1),r=sorted[+b.dataset.delinc];
+  if(!confirm('Remove the increment effective '+monthName(r.m)+' '+r.m.slice(0,4)+'? Payslips for those months will use the earlier salary.'))return;
+  incEmp.incs=incEmp.incs.filter(x=>x!==r);touch();renderIncTbl();renderIncHist();renderEmp();
+});
+$('incCancel').onclick=()=>$('incDlg').close();
 
 /* ---------- payslips ---------- */
 let payMonth=addMonth(ymOf(new Date()),-1),paySel=new Set(),paySelInit=null;
