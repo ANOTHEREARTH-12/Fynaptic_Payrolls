@@ -115,6 +115,25 @@ dialog::backdrop{background:rgba(20,20,30,.45)}
 .slip .wmk span{display:inline-block;width:330px;height:110px;line-height:110px;font:600 13px Arial,Helvetica,sans-serif;color:rgba(60,40,90,.085);white-space:nowrap;overflow:hidden;text-align:center}
 .slip .band{position:absolute;left:0;right:0;bottom:0;height:62px;background:#6f4aab;border-top:1px solid #000}
 #stage{position:fixed;left:-10000px;top:0}
+.ol{position:relative;width:794px;height:1123px;background:#fff;color:#000;font:14.4px/1.5 "Times New Roman",Times,serif;overflow:hidden}
+.ol .wm{position:absolute;left:215px;top:370px;width:360px;opacity:.28}
+.ol .top1{display:flex;justify-content:space-between;align-items:flex-start;padding:38px 56px 0 56px;font-family:Arial,Helvetica,sans-serif}
+.ol .top1 img{height:56px}.ol .top1 .addr{text-align:right;font-size:14px;line-height:1.55}
+.ol .topn{padding:30px 56px 0 56px;text-align:right}.ol .topn img{height:44px}
+.ol .body{position:absolute;left:62px;right:62px}
+.ol .blk{padding-bottom:11px;text-align:justify}
+.ol .center{text-align:center;font-weight:700}
+.ol .li{display:flex;gap:12px;padding-left:18px;padding-bottom:0}.ol .li span:first-child{flex:0 0 auto}
+.ol .b{font-weight:700}
+.ol .ctc{width:100%;border-collapse:collapse;font:12.5px Calibri,Arial,sans-serif;margin:4px 0 6px}
+.ol .ctc td{border:1px solid #000;padding:2px 8px}
+.ol .ctc td.n{text-align:center}
+.ol .ctc tr.h1 td{background:#bf9000;color:#fff;font-weight:700;text-align:center;padding:9px;font-size:13px}
+.ol .ctc tr.h2 td{font-weight:700;text-align:center}.ol .ctc tr.h2 td:first-child{text-align:left}
+.ol .ctc tr.g td{font-weight:700}
+.ol .sigimg{height:52px;display:block;margin-bottom:2px}
+.ol .band{position:absolute;left:0;right:0;bottom:0;height:62px;background:#6f4aab;border-top:1px solid #000}
+.rt{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px;background:#fcfcfd}
 .bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:8px;display:none}
 .bar i{display:block;height:100%;width:0;background:var(--brand)}
 </style>
@@ -219,6 +238,23 @@ dialog::backdrop{background:rgba(20,20,30,.45)}
           <div class="two"><div><label>Place</label><input type="text" id="coPlace"></div><div><label>Employee ID prefix</label><input type="text" id="coPrefix"></div></div>
         </div>
       </div>
+      <div class="two" style="align-items:start">
+        <div class="card"><h2>Offer letter — signatory &amp; text</h2>
+          <div class="two"><div><label style="margin-top:0">Signatory name</label><input type="text" id="ofName"></div><div><label style="margin-top:0">Company line</label><input type="text" id="ofCo"></div></div>
+          <div class="two"><div><label>Mobile</label><input type="text" id="ofMob"></div><div><label>E-mail</label><input type="text" id="ofMail"></div></div>
+          <label>Signature image (PNG with transparent background works best)</label>
+          <div class="row"><input type="file" id="ofSigFile" accept="image/*" style="flex:1;width:auto"><button id="ofSigDel" type="button">Remove</button></div>
+          <img id="ofSigImg" alt="" style="height:50px;margin-top:6px;display:none">
+          <label>Terms of Employment (one bullet per line)</label><textarea id="ofTerms" rows="7"></textarea>
+          <label>Confidentiality clause</label><textarea id="ofConf" rows="3"></textarea>
+          <label>Closing paragraph</label><textarea id="ofClose" rows="3"></textarea>
+        </div>
+        <div class="card"><h2>Offer letter — role templates (Key Responsibilities)</h2>
+          <div class="msg" style="margin:0 0 8px">The template is chosen from the employee's <b>Designation</b> (it must match the name below, ignoring capitals). Department is optional: use it only when the same designation needs different duties in different departments.</div>
+          <div id="roleList"></div>
+          <button id="addRole" type="button">+ Add role template</button>
+        </div>
+      </div>
     </section>
   </div>
 </div>
@@ -238,6 +274,10 @@ dialog::backdrop{background:rgba(20,20,30,.45)}
     <div><label>Tax regime</label><select id="fReg"><option>New Regime</option><option>Old Regime</option></select></div>
     <div><label>Opening leave balance</label><input type="number" id="fOpen" step="0.5" value="0"></div>
     <div><label>Balance is as of start of</label><input type="month" id="fOpenM"></div>
+    <div><label>Base location (offer letter)</label><input type="text" id="fLoc" placeholder="e.g. Salem"></div>
+    <div><label>Reports to (offer letter)</label><input type="text" id="fRep" placeholder="e.g. Branch Manager"></div>
+    <div><label>Grade (optional)</label><input type="text" id="fGrade" placeholder="e.g. Grade A"></div>
+    <div><label>Offer letter date</label><input type="date" id="fOfferDate"></div>
   </div>
   <div class="two" style="margin-top:10px">
     <div><label>Earnings (₹ per month)</label><div class="lines" id="earnLines"></div><button type="button" id="addEarn">+ Earning</button></div>
@@ -318,9 +358,16 @@ async function decObj(key,o){return JSON.parse(TD.decode(await crypto.subtle.dec
 /* ---------- state & storage ---------- */
 let mode='gh',key=null,token=null,sha=null,saltB=null,PW='',D=null;
 let dirty=false,saving=false,again=false,timer=null;
+const defOffer=()=>({
+  signName:'Sanjay Abraham',signCo:'Fynaptic Solutions Pvt.Ltd.',signMob:'+91 98847 02767',signMail:'sanjay.abraham@fynapticsolutions.com',sig:'',
+  terms:['You shall be a full-time employee with exclusive attention to the business of the Company.','During your employment, you shall observe and comply with the policies, rules, and regulations of the Company, as amended from time to time.',"Either party may terminate this employment by serving 30 days' prior written notice or salary in lieu thereof, as per company policy.",'You will be covered under the company health insurance program and the premium will be borne by the Company. The start date will be communicated to you by the Company.'],
+  conf:'You are expected to maintain complete confidentiality of any proprietary or sensitive information pertaining to the Company, its clients, or its business associates, both during and after your tenure.',
+  close:'We welcome you to the Fynaptic Solutions family and look forward to a mutually rewarding association. Please sign and return the duplicate copy of this letter as a token of your acceptance.',
+  roles:[{name:'Customer Relationship Officer',dept:'',items:['Build and maintain strong relationships with existing and new customers.','Ensure that all the repayments of customer are received before the due date.','Understand customer requirements and provide suitable product or service solutions.','Handle customer inquiries, complaints, and provide timely resolutions.','Ensure high levels of customer satisfaction through professional communication and support.','Follow up with customers regarding documentation, approvals, and service updates.','Coordinate with internal departments for smooth processing and customer service.','Maintain accurate customer records and update CRM systems regularly.','Promote company products and services to increase business opportunities.','Support sales and business development activities to achieve branch targets.','Conduct regular customer meetings and relationship visits.','Assist customers with account-related queries and service requests.','Ensure compliance with company policies and documentation procedures.','Monitor customer feedback and suggest improvements in service quality.','Maintain long-term customer engagement and retention.']}]
+});
 const blank=()=>({v:1,
   company:{short:'Fynaptic Solutions Pvt. Ltd.',addrTop:'Turnbulls Road, Nandanam,\nChennai - 600 035,\nTamilNadu, India.\nwww.fynapticsolutions.com',name:'FYNAPTIC SOLUTIONS PRIVATE LIMITED',addr:'16/2, Turnview Apratment, Turnbulls Rd, Nandanam Extension, Nandanam, Chennai, Tamil Nadu 600035',place:'Chennai',prefix:'FYN'},
-  settings:{weekoff:[0],accrual:2,prorate:true},employees:[],attendance:{},notes:{}});
+  settings:{weekoff:[0],accrual:2,prorate:true},employees:[],attendance:{},notes:{},offer:defOffer()});
 
 const gh={
   url(){return `https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${encodeURI(CFG.path)}`;},
@@ -516,7 +563,7 @@ function renderEmp(){
   D.employees.forEach(e=>{
     const g=salaryFor(e,mk).reduce((s,x)=>s+x.a,0);
     h+=`<tr><td>${esc(e.id)}</td><td>${esc(e.name)}</td><td>${esc(e.dept)}</td><td>${esc(e.desig)}</td><td>${esc(dmy(e.doj))}</td><td class="n">${inr(g)}</td><td class="n">${fd(calc(e,mk).open)}</td>
-      <td class="n"><button data-inc="${esc(e.id)}">Increment</button> <button data-ed="${esc(e.id)}">Edit</button> <button class="danger" data-del="${esc(e.id)}">Delete</button></td></tr>`;
+      <td class="n"><button data-offer="${esc(e.id)}">Offer letter</button> <button data-inc="${esc(e.id)}">Increment</button> <button data-ed="${esc(e.id)}">Edit</button> <button class="danger" data-del="${esc(e.id)}">Delete</button></td></tr>`;
   });
   if(!D.employees.length)h+='<tr><td colspan="8" style="padding:30px;color:#6b7487">No employees yet — click “Add employee”.</td></tr>';
   $('empTbl').innerHTML=h;
@@ -536,7 +583,7 @@ function openDlg(e){
   const v=(id,val)=>$(id).value=val??'';
   v('fId',e?e.id:nextId());$('fId').readOnly=!!e;v('fName',e&&e.name);v('fGender',e?e.gender:'Male');v('fDept',e&&e.dept);v('fDesig',e&&e.desig);
   v('fDoj',e&&e.doj);v('fBank',e&&e.bank);v('fAcc',e&&e.acc);v('fPan',e&&e.pan);v('fReg',e?e.reg:'New Regime');
-  v('fOpen',e?e.openLeave:0);v('fOpenM',e?e.openMonth:ymOf(new Date()));
+  v('fOpen',e?e.openLeave:0);v('fOpenM',e?e.openMonth:ymOf(new Date()));v('fLoc',e&&e.loc);v('fRep',e&&e.rep);v('fGrade',e&&e.grade);v('fOfferDate',e&&e.offerDate);
   $('earnLines').innerHTML='';$('dedLines').innerHTML='';
   (e?e.earn:[{n:'Basic',a:''},{n:'HRA',a:''},{n:'Special Allowance',a:''}]).forEach(x=>lineRow('earnLines',x.n,x.a));
   (e?e.ded:[{n:'Salary Advance',a:0},{n:'TDS',a:0}]).forEach(x=>lineRow('dedLines',x.n,x.a));
@@ -554,12 +601,13 @@ $('empSave').onclick=()=>{
   const earn=readLines('earnLines');if(!earn.length){$('empErr').textContent='Add at least one earning (e.g. Basic).';return;}
   let om=$('fOpenM').value||ymOf(new Date());
   const rec={id,name,gender:$('fGender').value,dept:$('fDept').value.trim(),desig:$('fDesig').value.trim(),doj,bank:$('fBank').value.trim(),
-    acc:$('fAcc').value.trim(),pan:$('fPan').value.trim().toUpperCase(),reg:$('fReg').value,openLeave:num($('fOpen').value),openMonth:om,earn,ded:readLines('dedLines')};
+    acc:$('fAcc').value.trim(),pan:$('fPan').value.trim().toUpperCase(),reg:$('fReg').value,openLeave:num($('fOpen').value),openMonth:om,earn,ded:readLines('dedLines'),loc:$('fLoc').value.trim(),rep:$('fRep').value.trim(),grade:$('fGrade').value.trim(),offerDate:$('fOfferDate').value,incs:editing?((D.employees.find(x=>x.id===editing)||{}).incs):undefined};
   if(editing){const i=D.employees.findIndex(x=>x.id===editing);D.employees[i]=rec;}else D.employees.push(rec);
   touch();$('empDlg').close();renderEmp();
 };
 $('empTbl').addEventListener('click',ev=>{
   const b=ev.target.closest('button');if(!b)return;
+  if(b.dataset.offer){offerLetter(D.employees.find(x=>x.id===b.dataset.offer));return;}
   if(b.dataset.inc)openInc(D.employees.find(x=>x.id===b.dataset.inc));
   if(b.dataset.ed)openDlg(D.employees.find(x=>x.id===b.dataset.ed));
   if(b.dataset.del){
@@ -622,6 +670,83 @@ $('incHist').addEventListener('click',ev=>{
   incEmp.incs=incEmp.incs.filter(x=>x!==r);touch();renderIncTbl();renderIncHist();renderEmp();
 });
 $('incCancel').onclick=()=>$('incDlg').close();
+
+/* ---------- offer letter ---------- */
+const ord=d=>d+(d%10===1&&d!==11?'st':d%10===2&&d!==12?'nd':d%10===3&&d!==13?'rd':'th');
+const longDate=iso=>{const d=pd(iso);return d?`${ord(d.getDate())} ${d.toLocaleString('en-IN',{month:'long'})} ${d.getFullYear()}`:'';};
+function findRole(e){
+  const n=(e.desig||'').trim().toLowerCase(),dp=(e.dept||'').trim().toLowerCase();
+  const m=D.offer.roles.filter(r=>r.name.trim().toLowerCase()===n);
+  return m.find(r=>r.dept&&r.dept.trim().toLowerCase()===dp)||m.find(r=>!r.dept)||null;
+}
+function offerBlocks(e,role){
+  const o=D.offer,co=D.company;
+  const title=esc(e.desig)+(e.grade?' ('+esc(e.grade)+')':'');
+  const todayIso=ymOf(new Date())+'-'+String(new Date().getDate()).padStart(2,'0');
+  const sal=salaryFor(e,(e.doj||'').slice(0,7)||ymOf(new Date())),G=sal.reduce((s,x)=>s+x.a,0);
+  const li=x=>`<div class="li"><span>•</span><span>${esc(x)}</span></div>`;
+  const B=[];
+  B.push(`<div class="b">${esc(longDate(e.offerDate||todayIso))}</div>`);
+  B.push(`<div class="center" style="font-size:15px">OFFER LETTER</div><div class="b" style="margin-top:10px">Dear ${esc(e.name)},</div>`);
+  B.push(`We are pleased to offer you the position of <b>${title}</b> at ${esc(co.short)}${e.loc?`, with your base location as ${esc(e.loc)}`:''}. ${e.rep?`You will be reporting to the ${esc(e.rep)} and `:'Your '}${e.rep?'your':''} <b>joining date will be ${esc(longDate(e.doj))}</b>. Based on our discussions and your experience, we are confident that you will make a significant contribution to our business and the continued success of the organization.`.replace(/^Your\s+(\s*)your/,'Your'));
+  if(role&&role.items.length){
+    B.push(`<div class="b" style="margin-bottom:6px">Key Responsibilities:</div>${li(role.items[0])}`);
+    role.items.slice(1).forEach(x=>B.push(li(x)));
+  }
+  B.push('PB');
+  const terms=o.terms;
+  if(terms.length){B.push(`<div class="b" style="margin-bottom:6px">Terms of Employment:</div><div class="li" style="padding-bottom:8px"><span>•</span><span>${esc(terms[0])}</span></div>`);
+    terms.slice(1).forEach(x=>B.push(`<div class="li" style="padding-bottom:8px"><span>•</span><span>${esc(x)}</span></div>`));}
+  const rows=sal.map(x=>`<tr><td>${esc(x.n)}</td><td class="n">${inr(x.a)}</td><td class="n">${inr(x.a*12)}</td></tr>`).join('');
+  B.push(`<table class="ctc"><tr class="h1"><td colspan="3">Annual CTC</td></tr><tr class="h2"><td>Earnings</td><td>Monthly</td><td>Yearly</td></tr>${rows}<tr class="g"><td>Gross Salary</td><td class="n">${inr(G)}</td><td class="n">${inr(G*12)}</td></tr></table>`);
+  if(o.conf)B.push(`<div class="b" style="margin-bottom:6px">Confidentiality Clause:</div>${esc(o.conf)}`);
+  if(o.close)B.push(esc(o.close));
+  B.push(`${o.sig?`<img class="sigimg" src="${o.sig}">`:'<div style="height:50px"></div>'}<div class="b">${esc(o.signName)},</div><div style="font-size:13.5px">${esc(o.signCo)}</div><div style="font-size:13.5px">Mobile: ${esc(o.signMob)} | E-Mail: <span style="color:#0563c1;text-decoration:underline">${esc(o.signMail)}</span></div>`);
+  B.push(`<div class="b" style="margin-bottom:6px">Candidate’s Acceptance:</div>I, ___________________________, accept the offer of appointment as <b>${esc(e.desig)}</b> with ${esc(co.short.replace(/\.\s*Ltd\./,' Ltd'))} on the terms and conditions mentioned above.<div style="margin-top:14px" class="b">Signature: ______________________</div><div class="b">Date: __________________________</div>`);
+  return B;
+}
+async function offerLetter(e){
+  if(!e)return;
+  if(!e.desig||!e.doj){alert('Add the designation and date of joining for this employee first (Edit).');return;}
+  const role=findRole(e);
+  if(!role&&!confirm(`There is no role template for "${e.desig}"${e.dept?' / '+e.dept:''}.\n\nOK = create the letter without a Key Responsibilities section.\nCancel = go to Settings and add a template first.`)){
+    tab('set');$('addRole').scrollIntoView();return;}
+  const W=794,H=1123,BAND=62,bodyW=W-124;
+  const wmI=`<img class="wm" src="${WM}">`;
+  const top1=`<div class="top1"><img src="${LOGO_TOP}"><div class="addr"><div>${esc(D.company.short)}</div><div>${esc(D.company.addrTop).split('\n').join('<br>')}</div></div></div>`;
+  const topN=`<div class="topn"><img src="${LOGO_TOP}"></div>`;
+  const blocks=offerBlocks(e,role);
+  const stage=$('stage');
+  stage.innerHTML=`<div id="olM" style="position:absolute;left:0;top:0;width:${bodyW}px;font:14.4px/1.5 'Times New Roman',Times,serif">${blocks.map(b=>b==='PB'?'<div class="blk" data-pb="1" style="height:0;padding:0"></div>':`<div class="blk" style="text-align:justify">${b}</div>`).join('')}</div>`;
+  const css=document.createElement('style');
+  await Promise.all([...stage.querySelectorAll('img')].map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r;})));
+  const kids=[...stage.querySelectorAll('#olM > .blk')];
+  const hs=kids.map(k=>k.getBoundingClientRect().height);
+  const capFirst=H-BAND-170-34,capNext=H-BAND-100-34;
+  const pages=[[]];let used=0,cap=capFirst;
+  kids.forEach((k,i)=>{
+    if(k.dataset.pb){if(pages[pages.length-1].length){pages.push([]);used=0;cap=capNext;}return;}
+    if(used+hs[i]>cap&&pages[pages.length-1].length){pages.push([]);used=0;cap=capNext;}
+    pages[pages.length-1].push(blocks[i]);used+=hs[i];
+  });
+  const{jsPDF}=window.jspdf;
+  const owner=[...crypto.getRandomValues(new Uint8Array(16))].map(x=>x.toString(16).padStart(2,'0')).join('');
+  const pdf=new jsPDF({unit:'mm',format:'a4',compress:true,encryption:{userPassword:'',ownerPassword:owner,userPermissions:['print']}});
+  pdf.setProperties({title:'Offer Letter',subject:'Offer letter',author:D.company.short,creator:D.company.short});
+  setStatus('Generating offer letter…','');
+  try{
+    for(let p=0;p<pages.length;p++){
+      stage.innerHTML=`<div class="ol">${wmI}${p===0?top1:topN}<div class="body" style="top:${p===0?170:100}px">${pages[p].map(b=>`<div class="blk">${b}</div>`).join('')}</div><div class="band"></div></div>`;
+      const el=stage.firstElementChild;
+      await Promise.all([...el.querySelectorAll('img')].map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r;})));
+      const cv=await html2canvas(el,{scale:2,backgroundColor:'#fff',width:W,height:H});
+      if(p)pdf.addPage();pdf.addImage(cv.toDataURL('image/jpeg',.95),'JPEG',0,0,210,297);
+    }
+    pdf.save(`Offer_Letter_${(e.name||'employee').replace(/\W+/g,'_')}.pdf`);
+    setStatus(dirty?'Unsaved changes…':'Offer letter downloaded ✓','ok');
+  }catch(err){setStatus('Offer letter failed: '+err.message,'bad');}
+  stage.innerHTML='';
+}
 
 /* ---------- payslips ---------- */
 let payMonth=addMonth(ymOf(new Date()),-1),paySel=new Set(),paySelInit=null;
@@ -741,7 +866,35 @@ function renderSet(){
   $('woBox').innerHTML=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((n,k)=>`<label style="display:inline-flex;gap:4px;align-items:center;margin:0;color:var(--ink)"><input type="checkbox" data-w="${k}" ${s.weekoff.includes(k)?'checked':''}>${n}</label>`).join('');
   $('connInfo').textContent=mode==='demo'?'Demo mode — data is stored only in this browser.':`Repository: ${CFG.owner}/${CFG.repo} · file: ${CFG.path} · branch: ${CFG.branch}. Data is encrypted before it is committed.`;
   $('reloadBtn').style.display=mode==='demo'?'none':'';
+  const o=D.offer;
+  $('ofName').value=o.signName;$('ofCo').value=o.signCo;$('ofMob').value=o.signMob;$('ofMail').value=o.signMail;
+  $('ofTerms').value=o.terms.join('\n');$('ofConf').value=o.conf;$('ofClose').value=o.close;
+  $('ofSigImg').style.display=o.sig?'':'none';if(o.sig)$('ofSigImg').src=o.sig;
+  renderRoles();
 }
+function renderRoles(){
+  $('roleList').innerHTML=D.offer.roles.map((r,i)=>`<div class="rt"><div class="two"><div><label style="margin-top:0">Designation (exact title)</label><input type="text" data-rf="name" data-ri="${i}" value="${esc(r.name)}"></div><div><label style="margin-top:0">Department (optional)</label><input type="text" data-rf="dept" data-ri="${i}" value="${esc(r.dept)}"></div></div>
+    <label>Key responsibilities (one bullet per line)</label><textarea data-rf="items" data-ri="${i}" rows="6">${esc(r.items.join('\n'))}</textarea>
+    <button type="button" class="danger" data-rdel="${i}" style="margin-top:6px">Delete template</button></div>`).join('')||'<div class="msg">No templates yet.</div>';
+}
+$('roleList').addEventListener('input',e=>{
+  const f=e.target.dataset.rf;if(!f)return;const r=D.offer.roles[+e.target.dataset.ri];
+  r[f]=f==='items'?e.target.value.split('\n').map(s=>s.trim()).filter(Boolean):e.target.value;touch();
+});
+$('roleList').addEventListener('click',e=>{const b=e.target.closest('[data-rdel]');if(!b)return;
+  if(confirm('Delete this role template?')){D.offer.roles.splice(+b.dataset.rdel,1);touch();renderRoles();}});
+$('addRole').onclick=()=>{D.offer.roles.push({name:'',dept:'',items:[]});touch();renderRoles();};
+[['ofName','signName'],['ofCo','signCo'],['ofMob','signMob'],['ofMail','signMail'],['ofConf','conf'],['ofClose','close']].forEach(([id,k])=>$(id).oninput=()=>{D.offer[k]=$(id).value;touch();});
+$('ofTerms').oninput=()=>{D.offer.terms=$('ofTerms').value.split('\n').map(s=>s.trim()).filter(Boolean);touch();};
+$('ofSigDel').onclick=()=>{D.offer.sig='';$('ofSigImg').style.display='none';touch();};
+$('ofSigFile').onchange=ev=>{
+  const f=ev.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=()=>{const im=new Image();im.onload=()=>{
+    const w=Math.min(420,im.width),h=Math.round(im.height*w/im.width),c=document.createElement('canvas');c.width=w;c.height=h;
+    c.getContext('2d').drawImage(im,0,0,w,h);D.offer.sig=c.toDataURL('image/png');
+    $('ofSigImg').src=D.offer.sig;$('ofSigImg').style.display='';touch();};im.src=rd.result;};
+  rd.readAsDataURL(f);
+};
 [['coShort','short'],['coAddrTop','addrTop'],['coName','name'],['coAddr','addr'],['coPlace','place'],['coPrefix','prefix']].forEach(([id,k])=>$(id).oninput=()=>{D.company[k]=$(id).value;touch();});
 $('stAccr').oninput=()=>{D.settings.accrual=num($('stAccr').value);touch();};
 $('stPro').onchange=()=>{D.settings.prorate=$('stPro').checked;touch();};
@@ -771,7 +924,7 @@ $('npwBtn').onclick=async()=>{
 
 /* ---------- start ---------- */
 function start(){
-  D.notes=D.notes||{};
+  D.notes=D.notes||{};D.offer=D.offer||defOffer();
   $('login').style.display='none';$('app').style.display='';
   if(dirty){setStatus('Unsaved changes…','');save();}else setStatus(mode==='demo'?'Demo mode':'Loaded ✓',mode==='demo'?'':'ok');
   tab('att');
