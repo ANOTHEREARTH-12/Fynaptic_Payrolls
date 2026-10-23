@@ -71,6 +71,8 @@ table.t tr.tot td{font-weight:700;background:#fafafc}
 .grid .mk{cursor:pointer;user-select:none;font-weight:600}
 .m-P{background:#e8f6ec;color:#16723a}.m-A{background:#fde8e8;color:#b42318}.m-L{background:#fff4d6;color:#8a5a00}
 .m-H{background:#e6f0ff;color:#1d4ed8}.m-W{background:#eceef2;color:#666}.m-D{background:#fdeedd;color:#b54708}
+.m-S{background:#fff1c2;color:#7a4b00}.m-E{background:#e7f7f3;color:#0b6b57}
+.grid .mk.hasnote{position:relative}.grid .mk.hasnote::after{content:'';position:absolute;top:0;right:0;border-top:7px solid #6f2fa0;border-left:7px solid transparent}
 .m-X{background:#f6f6f6;color:#bbb;cursor:default!important}.m-\.{background:#fff;color:#ccc}
 .m-\.:hover{background:#faf5fd}
 
@@ -152,12 +154,12 @@ dialog::backdrop{background:rgba(20,20,30,.45)}
         </div>
       </div>
       <div class="legend">Click a day to change:
-        <span><b class="m-P">P</b>Present</span><span><b class="m-A">A</b>Absent (LOP)</span><span><b class="m-L">L</b>Leave (uses balance)</span>
-        <span><b class="m-D">HD</b>Half day (½ LOP)</span><span><b class="m-H">H</b>Holiday</span><span><b class="m-W">WO</b>Week off</span><span><b class="m-X">–</b>Before joining</span>
-        <span>Click a <u>day number</u> to mark everyone Present for that day.</span>
+        <span><b class="m-P">P</b>Present</span><span><b class="m-A">A</b>Absent (LOP)</span><span><b class="m-L">L</b>Leave (uses balance)</span><span><b class="m-S">SL</b>Sick leave (uses balance)</span>
+        <span><b class="m-D">HD</b>Half day (½ leave, then LOP)</span><span><b class="m-E">PL</b>Paid special leave (no balance used)</span><span><b class="m-H">H</b>Holiday</span><span><b class="m-W">WO</b>Week off</span><span><b class="m-X">–</b>Before joining</span>
+        <span>Click a <u>day number</u> to mark everyone Present for that day.</span><span><b style="background:#6f2fa0;color:#fff;border-radius:2px;padding:0 4px">◥</b>Right-click a day to add a remark.</span>
       </div>
       <div class="gridwrap"><table class="grid" id="grid"></table></div>
-      <div class="msg">Leave is credited at each month end and usable from the next month; leave beyond the balance becomes LOP. New joiners get their first credit at the end of the month after joining. Unmarked days count as Present when payslips are generated.</div>
+      <div class="msg">Leave is credited at each month end and usable from the next month; leave beyond the balance becomes LOP. A half day uses ½ day of balance first; only the uncovered part is LOP. New joiners get their first credit at the end of the month after joining. Unmarked days count as Present when payslips are generated.</div>
     </section>
 
     <!-- EMPLOYEES -->
@@ -315,7 +317,7 @@ let mode='gh',key=null,token=null,sha=null,saltB=null,PW='',D=null;
 let dirty=false,saving=false,again=false,timer=null;
 const blank=()=>({v:1,
   company:{short:'Fynaptic Solutions Pvt. Ltd.',addrTop:'Turnbulls Road, Nandanam,\nChennai - 600 035,\nTamilNadu, India.\nwww.fynapticsolutions.com',name:'FYNAPTIC SOLUTIONS PRIVATE LIMITED',addr:'16/2, Turnview Apratment, Turnbulls Rd, Nandanam Extension, Nandanam, Chennai, Tamil Nadu 600035',place:'Chennai',prefix:'FYN'},
-  settings:{weekoff:[0],accrual:2,prorate:true},employees:[],attendance:{}});
+  settings:{weekoff:[0],accrual:2,prorate:true},employees:[],attendance:{},notes:{}});
 
 const gh={
   url(){return `https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${encodeURI(CFG.path)}`;},
@@ -399,8 +401,8 @@ $('demoBtn').onclick=()=>{
 $('logout').onclick=()=>{if(dirty&&!confirm('There are unsaved changes. Sign out anyway?'))return;location.reload();};
 
 /* ---------- attendance logic ---------- */
-const CYCLE=['.','P','A','L','D','H','W'];
-const LBL={'.':'','P':'P','A':'A','L':'L','H':'H','W':'WO','D':'HD','X':'–'};
+const CYCLE=['.','P','A','L','S','D','E','H','W'];
+const LBL={'.':'','P':'P','A':'A','L':'L','S':'SL','E':'PL','H':'H','W':'WO','D':'HD','X':'–'};
 function defMarks(e,mk){
   const[y,m]=mk.split('-').map(Number),n=mdays(mk),doj=pd(e.doj);let s='';
   for(let d=1;d<=n;d++){const dt=new Date(y,m-1,d);s+=(doj&&dt<doj)?'X':(D.settings.weekoff.includes(dt.getDay())?'W':'.');}
@@ -414,10 +416,11 @@ function marks(e,mk){
 function setMarks(e,mk,s){(D.attendance[mk]=D.attendance[mk]||{})[e.id]=s;}
 function mc(e,mk,open){
   const s=marks(e,mk),n=s.length,c=ch=>{let k=0;for(const x of s)if(x===ch)k++;return k;};
-  const pre=c('X'),A=c('A'),L=c('L'),H=c('D'),un=c('.');
-  const used=Math.min(L,Math.max(0,open)),lop=A+(L-used)+H*0.5,paid=Math.max(0,n-pre-lop);
+  const pre=c('X'),A=c('A'),Lv=c('L'),Sk=c('S'),Pl=c('E'),H=c('D'),un=c('.');
+  const L=Lv+Sk+H*0.5;                       // leave demand: L + SL + half of each HD
+  const used=Math.min(L,Math.max(0,open)),lop=A+(L-used),paid=Math.max(0,n-pre-lop);
   const doj=pd(e.doj),credit=(!doj||doj<mfirst(mk))?num(D.settings.accrual):0;
-  return {n,pre,lop,paid,L,used,open,credit,close:open-used+credit,un,joined:pre<n,factor:D.settings.prorate?paid/n:1};
+  return {n,pre,lop,paid,L,Sk,Pl,used,open,credit,close:open-used+credit,un,joined:pre<n,factor:D.settings.prorate?paid/n:1};
 }
 function openBal(e,mk){
   let b=num(e.openLeave),m=e.openMonth||mk,g=0;
@@ -465,7 +468,8 @@ function renderAtt(){
   emps.forEach(e=>{
     const c=calc(e,attMonth),s=marks(e,attMonth);
     h+=`<tr><td class="nm" title="${esc(e.name)}">${esc(e.name)} <small style="color:#6b7487">${esc(e.id)}</small></td>`;
-    for(let d=0;d<n;d++)h+=`<td class="mk m-${s[d]==='.'?'\\.':s[d]}" data-e="${esc(e.id)}" data-d="${d}">${LBL[s[d]]}</td>`;
+    const nt=((D.notes[attMonth]||{})[e.id])||{};
+    for(let d=0;d<n;d++){const rm=nt[d];h+=`<td class="mk m-${s[d]==='.'?'\\.':s[d]}${rm?' hasnote':''}" data-e="${esc(e.id)}" data-d="${d}"${rm?` title="${esc(rm)}"`:''}>${LBL[s[d]]}</td>`;}
     h+=`<td>${fd(c.paid)}</td><td>${fd(c.lop)}</td><td>${fd(c.used)}</td><td>${fd(c.open)}</td><td><b>${fd(c.close)}</b></td></tr>`;
   });
   $('grid').innerHTML=h;
@@ -483,6 +487,15 @@ $('grid').addEventListener('click',ev=>{
   const e=D.employees.find(x=>x.id===t.dataset.e),d=+t.dataset.d;if(!e)return;
   const s=marks(e,attMonth).split('');s[d]=CYCLE[(CYCLE.indexOf(s[d])+1)%CYCLE.length];
   setMarks(e,attMonth,s.join(''));touch();renderAtt();
+});
+$('grid').addEventListener('contextmenu',ev=>{
+  const t=ev.target.closest('td.mk');if(!t)return;ev.preventDefault();
+  const e=D.employees.find(x=>x.id===t.dataset.e),d=+t.dataset.d;if(!e)return;
+  const m=(D.notes[attMonth]=D.notes[attMonth]||{}),nt=(m[e.id]=m[e.id]||{});
+  const v=prompt(`Remark for ${e.name} — ${d+1} ${monthName(attMonth)} (leave empty to clear):`,nt[d]||'');
+  if(v===null)return;
+  if(v.trim())nt[d]=v.trim();else delete nt[d];
+  touch();renderAtt();
 });
 $('fillBtn').onclick=()=>{
   const lim=new Date();lim.setHours(0,0,0,0);const[y,m]=attMonth.split('-').map(Number);let ch=0;
@@ -549,7 +562,7 @@ $('empTbl').addEventListener('click',ev=>{
   if(b.dataset.del){
     const e=D.employees.find(x=>x.id===b.dataset.del);
     if(confirm(`Delete ${e.name} (${e.id}) and all their attendance? This cannot be undone.`)){
-      D.employees=D.employees.filter(x=>x!==e);Object.values(D.attendance).forEach(m=>delete m[e.id]);touch();renderEmp();
+      D.employees=D.employees.filter(x=>x!==e);Object.values(D.attendance).forEach(m=>delete m[e.id]);Object.values(D.notes).forEach(m=>delete m[e.id]);touch();renderEmp();
     }
   }
 });
@@ -746,6 +759,7 @@ $('npwBtn').onclick=async()=>{
 
 /* ---------- start ---------- */
 function start(){
+  D.notes=D.notes||{};
   $('login').style.display='none';$('app').style.display='';
   if(dirty){setStatus('Unsaved changes…','');save();}else setStatus(mode==='demo'?'Demo mode':'Loaded ✓',mode==='demo'?'':'ok');
   tab('att');
