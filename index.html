@@ -6,9 +6,10 @@
 <title>HR Attendance & Payslips</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=League+Spartan:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="config.js"></script>
 <style>
-:root{--bg:#f4f6f9;--card:#fff;--ink:#1d2433;--mute:#6b7487;--line:#e2e6ee;--brand:#6f2fa0;--brand-d:#561f80;--ok:#16723a;--bad:#b42318}
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1d2433;--mute:#6b7487;--line:#e2e6ee;--brand:#724eae;--brand-d:#561f80;--ok:#16723a;--bad:#b42318}
 *{box-sizing:border-box}
 body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
 h1{font-size:20px;margin:0 0 4px}
@@ -65,14 +66,14 @@ table.t tr.tot td{font-weight:700;background:#fafafc}
 .grid th.dh{cursor:pointer}.grid th.dh:hover{background:#ede4f5}
 .grid th small{font-weight:400;color:var(--mute)}
 .grid th.wo{background:#ececf2}
-.grid th.today{background:#6f2fa0;color:#fff}.grid th.today small{color:#e9d9f5}
+.grid th.today{background:#724eae;color:#fff}.grid th.today small{color:#e9d9f5}
 .grid .nm{position:sticky;left:0;background:#fff;text-align:left;min-width:160px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 8px;z-index:3}
 .grid th.nm{background:#f6f7fa;z-index:4}
 .grid .mk{cursor:pointer;user-select:none;font-weight:600}
 .m-P{background:#e8f6ec;color:#16723a}.m-A{background:#fde8e8;color:#b42318}.m-L{background:#fff4d6;color:#8a5a00}
 .m-H{background:#e6f0ff;color:#1d4ed8}.m-W{background:#eceef2;color:#666}.m-D{background:#fdeedd;color:#b54708}
 .m-S{background:#fff1c2;color:#7a4b00}.m-E{background:#e7f7f3;color:#0b6b57}
-.grid .mk.hasnote{position:relative}.grid .mk.hasnote::after{content:'';position:absolute;top:0;right:0;border-top:7px solid #6f2fa0;border-left:7px solid transparent}
+.grid .mk.hasnote{position:relative}.grid .mk.hasnote::after{content:'';position:absolute;top:0;right:0;border-top:7px solid #724eae;border-left:7px solid transparent}
 .m-X{background:#f6f6f6;color:#bbb;cursor:default!important}.m-\.{background:#fff;color:#ccc}
 .m-\.:hover{background:#faf5fd}
 
@@ -145,6 +146,73 @@ dialog::backdrop{background:rgba(20,20,30,.45)}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:10px 0}
 .cards div{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px}.cards b{display:block;font-size:20px}.cards small{color:var(--mute)}
 .banner{background:#fff4d6;color:#8a5a00;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-weight:600}
+/* ===== Fynaptic theme (indigo + purple, sidebar layout) ===== */
+:root{--bg:#f6f4ff;--ink:#1e1933;--mute:#6b6875;--line:#e5e2ee;--brand:#724eae;--brand-d:#5b3a92;--indigo:#19154e;--lav:#f6f4ff}
+body{font-family:Inter,"Segoe UI",system-ui,Arial,sans-serif;background:linear-gradient(180deg,#fff 0,#f6f4ff 320px) fixed,#f6f4ff;font-size:14px}
+h1,h2{font-family:"League Spartan",Manrope,Inter,system-ui,sans-serif;letter-spacing:-.01em}
+h1{color:var(--indigo)}
+button{border-radius:10px;padding:8px 14px;transition:background .15s,border-color .15s}
+button:hover:not(:disabled){border-color:var(--brand);color:var(--brand-d)}
+button.primary{background:#151419;border-color:#151419;color:#fff}
+button.primary:hover:not(:disabled){background:var(--brand);border-color:var(--brand);color:#fff}
+input[type=text],input[type=password],input[type=month],input[type=date],input[type=number],select,textarea{border-radius:10px;padding:9px 11px}
+input:focus,select:focus,textarea:focus{outline:2px solid #d9cdf0;border-color:var(--brand)}
+label{font-weight:600;color:#4a4560}
+.card{border-radius:16px;padding:18px;box-shadow:0 1px 2px rgba(25,21,78,.04)}
+.card h2{font-size:18px;text-transform:none;letter-spacing:-.01em;color:var(--indigo);margin:0 0 12px}
+.tw,.gridwrap{border-radius:14px}
+table.t th{background:var(--lav);font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}
+table.t tr.tot td{background:var(--lav)}
+table.t tbody tr:hover td{background:#fbfaff}
+.grid th{background:var(--lav)}.grid th.nm{background:var(--lav)}
+.grid th.today{background:var(--brand)}
+.grid .mk.hasnote::after{border-top-color:var(--brand)}
+.st{border-radius:99px;padding:2px 10px}
+.warn,.banner{border-radius:10px}
+.cards{gap:14px}
+.cards div{border-radius:16px;padding:16px 18px;box-shadow:0 1px 2px rgba(25,21,78,.04)}
+.cards b{font:600 28px "League Spartan",Inter,sans-serif;color:var(--indigo)}
+.cards div:first-child{background:linear-gradient(135deg,var(--indigo),var(--brand));border:0}
+.cards div:first-child b,.cards div:first-child small{color:#fff}
+dialog{border-radius:18px}
+.rt{border-radius:12px}
+/* login */
+.loginwrap{background:linear-gradient(180deg,#fff,#f0ecff)}
+.logincard{border-radius:22px;padding:34px;max-width:410px;box-shadow:0 20px 50px rgba(25,21,78,.12)}
+.logincard img{height:46px;margin-bottom:20px}
+.logincard h1{font-size:30px}
+.logincard input{padding:12px}
+.logincard button.primary{padding:12px;margin-top:6px}
+/* app shell: sidebar */
+#app{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+#app>header{grid-column:1;grid-row:1;position:sticky;top:0;height:100vh;z-index:20;background:var(--indigo);border:0;padding:16px 12px;flex-direction:column;align-items:stretch;flex-wrap:nowrap;gap:4px;overflow:auto;color:#d9d4f2}
+#app>header #hdLogo{height:auto;width:100%;max-height:52px;object-fit:contain;background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:14px}
+#app>header nav{flex-direction:column;flex:1 1 auto;flex-wrap:nowrap;gap:2px}
+#app>header nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;color:#d9d4f2;border-radius:10px;padding:10px 12px;font-weight:500;font-size:14px;border:0}
+#app>header nav button:hover{background:rgba(255,255,255,.08);color:#fff}
+#app>header nav button.on{background:var(--brand);color:#fff;font-weight:600}
+#app>header nav button::before{content:"•";width:18px;text-align:center;opacity:.9;font-size:15px}
+#app>header nav button[data-t=dash]::before{content:"▦"}#app>header nav button[data-t=att]::before,#app>header nav button[data-t=my]::before{content:"▤"}
+#app>header nav button[data-t=emp]::before,#app>header nav button[data-t=prof]::before{content:"☺"}#app>header nav button[data-t=pay]::before,#app>header nav button[data-t=mypay]::before{content:"₹"}
+#app>header nav button[data-t=pf]::before{content:"◈"}#app>header nav button[data-t=cal]::before{content:"▥"}#app>header nav button[data-t=appr]::before,#app>header nav button[data-t=req]::before{content:"✓"}
+#app>header nav button[data-t=aud]::before{content:"⌬"}#app>header nav button[data-t=set]::before{content:"⚙"}
+#app>header #who{color:#fff;font-weight:600;font-size:13px;margin:10px 4px 0;padding-top:12px;border-top:1px solid rgba(255,255,255,.14)}
+#app>header #status{margin:0 4px;color:#b9b2e0}#app>header #status.ok{color:#7ee0a1}#app>header #status.bad{color:#ff9d93}
+#app>header #refreshBtn,#app>header #logout{background:rgba(255,255,255,.1);color:#fff;border:0;width:100%;text-align:left;margin-top:2px}
+#app>header #refreshBtn:hover,#app>header #logout:hover{background:rgba(255,255,255,.2);color:#fff}
+#app>.wrap{grid-column:2;max-width:none;margin:0;padding:24px 30px;width:100%;min-width:0}
+.phead{margin-bottom:16px}.phead h1{font-size:28px;margin:0}.phead p{margin:2px 0 0;color:var(--mute);font-size:14px}
+@media(max-width:860px){
+ #app{grid-template-columns:1fr}
+ #app>header{grid-column:1;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:8px 10px;position:sticky;top:0;gap:6px}
+ #app>header #hdLogo{width:auto;height:28px;max-height:none;margin:0;padding:4px 8px}
+ #app>header nav{order:5;flex:1 1 100%;flex-direction:row;overflow-x:auto}
+ #app>header nav button{width:auto;white-space:nowrap;padding:8px 10px}
+ #app>header #who{margin:0 6px;padding:0;border:0;flex:1}
+ #app>header #refreshBtn,#app>header #logout{width:auto;margin:0}
+ #app>.wrap{grid-column:1;padding:16px 12px}
+ .logincard{padding:24px}
+}
 </style>
 </head>
 <body>
@@ -185,6 +253,7 @@ dialog::backdrop{background:rgba(20,20,30,.45)}
   </header>
 
   <div class="wrap">
+    <div class="phead"><h1 id="pgT"></h1><p id="pgS"></p></div>
     <!-- ATTENDANCE -->
     <section class="sec on" id="s-att">
       <div class="row" style="margin-bottom:6px">
@@ -197,7 +266,7 @@ dialog::backdrop{background:rgba(20,20,30,.45)}
       <div class="legend">Click a day to change:
         <span><b class="m-P">P</b>Present</span><span><b class="m-A">A</b>Absent (LOP)</span><span><b class="m-L">L</b>Leave (uses balance)</span><span><b class="m-S">SL</b>Sick leave (uses balance)</span>
         <span><b class="m-D">HD</b>Half day (½ leave, then LOP)</span><span><b class="m-E">PL</b>Paid special leave (no balance used)</span><span><b class="m-H">H</b>Holiday</span><span><b class="m-W">WO</b>Week off</span><span><b class="m-X">–</b>Not employed (before joining / after exit)</span>
-        <span>Click a <u>day number</u> to mark everyone Present for that day.</span><span><b style="background:#6f2fa0;color:#fff;border-radius:2px;padding:0 4px">◥</b>Right-click a day to add a remark.</span>
+        <span>Click a <u>day number</u> to mark everyone Present for that day.</span><span><b style="background:#724eae;color:#fff;border-radius:2px;padding:0 4px">◥</b>Right-click a day to add a remark.</span>
       </div>
       <div class="gridwrap"><table class="grid" id="grid"></table></div>
       <div class="msg">Leave is credited at each month end and usable from the next month; the balance resets to zero every January (no carry forward, no encashment); leave beyond the balance becomes LOP. A half day uses ½ day of balance first; only the uncovered part is LOP. New joiners get their first credit at the end of the month after joining. Unmarked days count as Present when payslips are generated.</div>
@@ -766,6 +835,7 @@ function payLive(e,mk){
 /* ---------- tabs ---------- */
 function tab(t){
   if(forceChange)t='prof';curTab=t;
+  {const PT={dash:['Dashboard','Overview of people, requests and payroll'],att:['Attendance','Mark daily attendance and add remarks'],emp:['Employees','Employee records, logins and salary structure'],pay:['Payslips','Generate, release and lock monthly payroll'],pf:['Provident Fund','EPF / EPS / EDLI statement, ECR and challan'],my:['My attendance',''],req:['My requests','Leave, corrections and resignation'],mypay:['My payslips',''],prof:['My profile',''],cal:['Team calendar','Who is on leave and holidays'],appr:['Approvals','Requests waiting for your decision'],aud:['Audit log','Every change made in the portal'],set:['Settings','Company, holidays, PF and policies']}[t]||[t,''];$('pgT').textContent=PT[0];$('pgS').textContent=PT[1];}
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   document.querySelectorAll('.sec').forEach(s=>s.classList.toggle('on',s.id==='s-'+t));
   if(t==='att')renderAtt();if(t==='emp')renderEmp();if(t==='pay')renderPay();if(t==='set')renderSet();if(t==='my')renderMy();if(t==='req')renderReq();if(t==='mypay')renderMyPay();if(t==='prof')renderProf();if(t==='appr')renderAppr();if(t==='dash')renderDash();if(t==='pf')renderPF();if(t==='cal')renderCal();if(t==='aud')renderAud();
