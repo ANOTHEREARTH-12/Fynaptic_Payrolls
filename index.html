@@ -213,6 +213,38 @@ dialog{border-radius:18px}
  #app>.wrap{grid-column:1;padding:16px 12px}
  .logincard{padding:24px}
 }
+
+/* ===== attendance redesign ===== */
+.astats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px}
+.ast{background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px}
+.ast i{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-style:normal;font-weight:700;flex:none}
+.ast b{font:600 21px "League Spartan",Inter,sans-serif;display:block;line-height:1;color:var(--indigo)}.ast span{font-size:11.5px;color:var(--mute)}
+.atb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.mnav{display:flex;align-items:center;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.mnav button{border:0;border-radius:0;background:none;padding:7px 12px;font-size:16px}
+.mnav input{border:0;border-radius:0;width:170px;text-align:center;font-weight:600;padding:8px}
+.asearch{width:210px!important}
+.atag{background:#fff4d6;color:#8a5a00;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:600}
+.legend{gap:6px;align-items:center;margin:0 0 10px}
+.legend em{font-style:normal;color:var(--mute);margin-right:2px}
+.legend span{display:inline-flex;align-items:center;background:#fff;border:1px solid var(--line);border-radius:99px;padding:2px 10px 2px 3px;font-size:11.5px}
+.legend span b{border-radius:99px;min-width:22px;padding:1px 4px;margin-right:5px;font-size:10.5px}
+.gridwrap{max-height:66vh;box-shadow:0 1px 2px rgba(25,21,78,.04)}
+.grid th,.grid td{height:34px;border-right:0;border-bottom:1px solid #f2f0f8}
+.grid th{border-bottom:1px solid var(--line)}
+.grid .nm{background:#fff;border-right:1px solid var(--line)!important;min-width:230px;max-width:260px}
+.grid .nm .av{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:99px;background:#ece6f8;color:var(--brand-d);font-weight:700;font-size:10px;margin-right:8px;vertical-align:middle}
+.grid th.wo{background:#f1f0f6}
+.grid .mk{border-radius:9px;box-shadow:inset 0 0 0 3px #fff}
+.grid .m-W{background:repeating-linear-gradient(135deg,#f6f5fa,#f6f5fa 4px,#eeedf5 4px,#eeedf5 8px)}
+.grid .m-\.:empty::after{content:"·";color:#d3d0de}
+.grid .m-\.:hover{background:#f3edfc}
+.grid tbody tr:hover td{background-color:#faf8ff}.grid tbody tr:hover td.nm{background:#faf8ff}
+.grid .sm{position:sticky;background:#fff;z-index:3;min-width:58px;border-left:1px solid #f2f0f8}
+.grid th.sm{background:var(--lav);z-index:5;font-size:11px;white-space:normal;line-height:1.1}
+.grid .sm:nth-last-child(1){right:0}.grid .sm:nth-last-child(2){right:58px}.grid .sm:nth-last-child(3){right:116px}.grid .sm:nth-last-child(4){right:174px}.grid .sm:nth-last-child(5){right:232px}
+.grid tbody tr:hover td.sm{background:#faf8ff}
+@media(max-width:1100px){.grid .sm{position:static}.astats{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -256,14 +288,14 @@ dialog{border-radius:18px}
     <div class="phead"><h1 id="pgT"></h1><p id="pgS"></p></div>
     <!-- ATTENDANCE -->
     <section class="sec on" id="s-att">
-      <div class="row" style="margin-bottom:6px">
-        <div><label style="margin:0 0 3px">Month</label><input type="month" id="attMonth" style="width:170px"></div>
-        <div style="flex:1;min-width:160px"><label style="margin:0 0 3px">Search</label><input type="text" id="attQ" placeholder="Name / ID"></div>
-        <div style="align-self:flex-end" class="row">
-          <button id="attXls">Export Excel</button> <button id="impBtn">Import attendance</button> <button id="fillBtn">Mark unmarked days up to today as Present</button>
-        </div>
+      <div class="astats" id="attStats"></div>
+      <div class="atb">
+        <div class="mnav"><button id="attPrev" title="Previous month">‹</button><input type="month" id="attMonth"><button id="attNext" title="Next month">›</button></div>
+        <input type="text" id="attQ" placeholder="Search name / ID" class="asearch">
+        <span class="atag" id="attTag"></span><span style="flex:1"></span>
+        <button id="fillBtn" class="primary">Mark unmarked days up to today as Present</button><button id="impBtn">Import</button><button id="attXls">Export Excel</button>
       </div>
-      <div class="legend">Click a day to change:
+      <div class="legend"><em>Legend</em>
         <span><b class="m-P">P</b>Present</span><span><b class="m-A">A</b>Absent (LOP)</span><span><b class="m-L">L</b>Leave (uses balance)</span><span><b class="m-S">SL</b>Sick leave (uses balance)</span>
         <span><b class="m-D">HD</b>Half day (½ leave, then LOP)</span><span><b class="m-E">PL</b>Paid special leave (no balance used)</span><span><b class="m-H">H</b>Holiday</span><span><b class="m-W">WO</b>Week off</span><span><b class="m-X">–</b>Not employed (before joining / after exit)</span>
         <span>Click a <u>day number</u> to mark everyone Present for that day.</span><span><b style="background:#724eae;color:#fff;border-radius:2px;padding:0 4px">◥</b>Right-click a day to add a remark.</span>
@@ -835,7 +867,7 @@ function payLive(e,mk){
 /* ---------- tabs ---------- */
 function tab(t){
   if(forceChange)t='prof';curTab=t;
-  {const PT={dash:['Dashboard','Overview of people, requests and payroll'],att:['Attendance','Mark daily attendance and add remarks'],emp:['Employees','Employee records, logins and salary structure'],pay:['Payslips','Generate, release and lock monthly payroll'],pf:['Provident Fund','EPF / EPS / EDLI statement, ECR and challan'],my:['My attendance',''],req:['My requests','Leave, corrections and resignation'],mypay:['My payslips',''],prof:['My profile',''],cal:['Team calendar','Who is on leave and holidays'],appr:['Approvals','Requests waiting for your decision'],aud:['Audit log','Every change made in the portal'],set:['Settings','Company, holidays, PF and policies']}[t]||[t,''];$('pgT').textContent=PT[0];$('pgS').textContent=PT[1];}
+  {const PT={dash:['Dashboard','Overview of people, requests and payroll'],att:['Attendance','Click a cell to cycle · click a day number to mark everyone present · right-click for a remark'],emp:['Employees','Employee records, logins and salary structure'],pay:['Payslips','Generate, release and lock monthly payroll'],pf:['Provident Fund','EPF / EPS / EDLI statement, ECR and challan'],my:['My attendance',''],req:['My requests','Leave, corrections and resignation'],mypay:['My payslips',''],prof:['My profile',''],cal:['Team calendar','Who is on leave and holidays'],appr:['Approvals','Requests waiting for your decision'],aud:['Audit log','Every change made in the portal'],set:['Settings','Company, holidays, PF and policies']}[t]||[t,''];$('pgT').textContent=PT[0];$('pgS').textContent=PT[1];}
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   document.querySelectorAll('.sec').forEach(s=>s.classList.toggle('on',s.id==='s-'+t));
   if(t==='att')renderAtt();if(t==='emp')renderEmp();if(t==='pay')renderPay();if(t==='set')renderSet();if(t==='my')renderMy();if(t==='req')renderReq();if(t==='mypay')renderMyPay();if(t==='prof')renderProf();if(t==='appr')renderAppr();if(t==='dash')renderDash();if(t==='pf')renderPF();if(t==='cal')renderCal();if(t==='aud')renderAud();
@@ -853,18 +885,32 @@ function renderAtt(){
   let h='<tr><th class="nm">Employee</th>';
   for(let d=1;d<=n;d++){const w=new Date(y,m-1,d).getDay();
     h+=`<th class="dh ${D.settings.weekoff.includes(w)?'wo':''} ${isCur&&today.getDate()===d?'today':''}" data-day="${d-1}" title="Mark everyone present">${d}<br><small>${wd[w]}</small></th>`;}
-  h+='<th>Paid</th><th>LOP</th><th>Leave used</th><th>Opening</th><th>Closing</th></tr>';
+  h+='<th class="sm">Paid</th><th class="sm">LOP</th><th class="sm">Leave used</th><th class="sm">Opening</th><th class="sm">Closing</th></tr>';
   emps.forEach(e=>{
     const c=calc(e,attMonth),s=marks(e,attMonth);
-    h+=`<tr><td class="nm" title="${esc(e.name)}">${esc(e.name)} <small style="color:#6b7487">${esc(e.id)}</small></td>`;
+    h+=`<tr><td class="nm" title="${esc(e.name)}"><span class="av">${esc(e.name.split(' ').map(x=>x[0]||'').join('').slice(0,2).toUpperCase())}</span>${esc(e.name)} <small style="color:#6b7487">${esc(e.id)}</small></td>`;
     const nt=((D.notes[attMonth]||{})[e.id])||{};
     for(let d=0;d<n;d++){const rm=nt[d];h+=`<td class="mk m-${s[d]==='.'?'\\.':s[d]}${rm?' hasnote':''}" data-e="${esc(e.id)}" data-d="${d}"${rm?` title="${esc(rm)}"`:''}>${LBL[s[d]]}</td>`;}
-    h+=`<td>${fd(c.paid)}</td><td>${fd(c.lop)}</td><td>${fd(c.used)}</td><td>${fd(c.open)}</td><td><b>${fd(c.close)}</b></td></tr>`;
+    h+=`<td class="sm">${fd(c.paid)}</td><td class="sm">${fd(c.lop)}</td><td class="sm">${fd(c.used)}</td><td class="sm">${fd(c.open)}</td><td class="sm"><b>${fd(c.close)}</b></td></tr>`;
   });
   $('grid').innerHTML=h;
+  /* summary strip */
+  {let pr=0,lv=0,ab=0,un=0,pc=0,dn=0,unAll=0;const idx=isCur?today.getDate()-1:n-1;
+   emps.forEach(e=>{const s=marks(e,attMonth),c0=pd(e.doj);
+     for(let d=0;d<n;d++){const ch=s[d];if(isCur&&d>idx)break;
+       if(d===idx){if(ch==='P'||ch==='E')pr++;else if(ch==='D')pr+=.5;else if(ch==='L'||ch==='S')lv++;else if(ch==='A')ab++;else if(ch==='.')un++;}
+       if(ch==='.')unAll++;
+       if('PAELSD'.includes(ch)&&ch!=='.'){dn++;if(ch==='P'||ch==='E')pc++;else if(ch==='D')pc+=.5;}
+     }});
+   const when=isCur?'today':'on '+n+'th';
+   const st=(cls,ic,v,l)=>`<div class="ast"><i class="${cls}">${ic}</i><div><b>${v}</b><span>${l}</span></div></div>`;
+   $('attStats').innerHTML=st('m-P','P',pr,'Present '+when)+st('m-L','L',lv,'On leave '+when)+st('m-A','A',ab,'Absent '+when)+st('m-D','?',un,'Unmarked '+when)+st('m-W','%',dn?Math.round(pc/dn*100)+'%':'—','Present rate (marked days)');
+   $('attTag').textContent=unAll?unAll+' unmarked day(s) so far':'';$('attTag').style.display=unAll?'':'none';}
 }
 $('attMonth').onchange=e=>{if(e.target.value){attMonth=e.target.value;renderAtt();}};
 $('attQ').oninput=renderAtt;
+$('attPrev').onclick=()=>{attMonth=addMonth(attMonth,-1);renderAtt();};
+$('attNext').onclick=()=>{attMonth=addMonth(attMonth,1);renderAtt();};
 $('grid').addEventListener('click',ev=>{
   const t=ev.target.closest('td.mk,th.dh');if(!t)return;
   if(isLocked(attMonth)){alert('This month is locked. Unlock it in Payslips to edit attendance.');return;}
