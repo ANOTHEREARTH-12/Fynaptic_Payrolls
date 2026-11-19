@@ -1906,7 +1906,7 @@ function pfRows(mk){
 function pfTotals(rows,mk){
   const t={w:0,epsW:0,edliW:0,ee:0,eps:0,er:0,edli:0};rows.forEach(({pf})=>{t.w+=pf.w;t.epsW+=pf.epsW;t.edliW+=pf.edliW;t.ee+=pf.ee;t.eps+=pf.eps;t.er+=pf.er;t.edli+=pf.edli;});
   const f=D.settings.pf;t.adm=rows.length?Math.max(num(f.admMin),Math.round(t.w*f.adm/100+1e-9)):0;
-  t.a01=t.ee+t.er;t.a02=t.adm;t.a10=t.eps;t.a21=t.edli;t.a22=0;t.total=t.a01+t.a02+t.a10+t.a21+t.a22;return t;
+  t.a01=t.ee+t.er;t.a10=t.eps;t.total=t.a01+t.a10;return t;
 }
 function renderPF(){
   $('pfMonth').value=pfMonth;const f=D.settings.pf,mk=pfMonth;
@@ -1914,13 +1914,13 @@ function renderPF(){
   if(mk<f.from){$('pfMsg').innerHTML=`<div class="msg">PF applies from ${esc(monthName(f.from))} ${f.from.slice(0,4)}.</div>`;$('pfTbl').innerHTML='';$('pfChal').innerHTML='';return;}
   const rows=pfRows(mk),t=pfTotals(rows,mk),cap=pfCap(mk),bad=rows.filter(r=>!/^\d{12}$/.test(r.e.uan||''));
   $('pfMsg').innerHTML=`<div class="msg" style="margin:0">Wage ceiling for ${esc(monthName(mk))}: <b>₹${inr(cap)}</b>${cap!==pfCap(addMonth(mk,-1))?' (changes this month — day-weighted; edit wages in the table if EPFO guidance differs)':''}. PF wages = ${esc(f.heads)} after LOP, capped. NCP days = LOP + days not employed.</div>`+(bad.length?`<div class="banner" style="margin-top:8px">${bad.length} member(s) have no valid 12-digit UAN: ${esc(bad.map(r=>r.e.name).join(', '))}</div>`:'');
-  let h='<tr><th>ID</th><th>Name</th><th>UAN</th><th class="n">Gross</th><th class="n">EPF wages</th><th class="n">EPS wages</th><th class="n">EDLI wages</th><th class="n">Employee EPF 12%</th><th class="n">Employer EPF 3.67%</th><th class="n">Employer EPS 8.33%</th><th class="n">Total PF 24%</th><th class="n">EDLI</th><th class="n">NCP</th></tr>';
-  rows.forEach(({e,p,pf})=>{h+=`<tr><td>${esc(e.id)}</td><td>${esc(e.name)}</td><td>${e.uan?esc(e.uan):'<span class="warn">missing</span>'}</td><td class="n">${inr(p.gross)}</td><td class="n"><input type="number" min="0" data-pfov="${esc(e.id)}" value="${pf.w}" style="width:90px;text-align:right${pf.hasOv?';background:#fff4d6':''}" title="${pf.hasOv?'Manually overridden':'Calculated: '+inr(pf.w)+' (PF-able '+inr(pf.raw)+')'}"></td><td class="n">${inr(pf.epsW)}</td><td class="n">${inr(pf.edliW)}</td><td class="n">${inr(pf.ee)}</td><td class="n">${inr(pf.er)}</td><td class="n">${inr(pf.eps)}</td><td class="n"><b>${inr(pf.ee+pf.er+pf.eps)}</b></td><td class="n">${inr(pf.edli)}</td><td class="n">${pf.ncp}</td></tr>`;});
-  if(rows.length)h+=`<tr class="tot"><td></td><td>Total (${rows.length})</td><td></td><td class="n">${inr(rows.reduce((s,r)=>s+r.p.gross,0))}</td><td class="n">${inr(t.w)}</td><td class="n">${inr(t.epsW)}</td><td class="n">${inr(t.edliW)}</td><td class="n">${inr(t.ee)}</td><td class="n">${inr(t.er)}</td><td class="n">${inr(t.eps)}</td><td class="n">${inr(t.ee+t.er+t.eps)}</td><td class="n">${inr(t.edli)}</td><td></td></tr>`;
-  else h+='<tr><td colspan="13" style="padding:24px;color:#6b7487">No PF members this month. Tick “PF applicable” on employees (or use Enable PF for all).</td></tr>';
+  let h='<tr><th>ID</th><th>Name</th><th>UAN</th><th class="n">Gross</th><th class="n">EPF wages</th><th class="n">EPS wages</th><th class="n">Employee EPF 12%</th><th class="n">Employer EPF 3.67%</th><th class="n">Employer EPS 8.33%</th><th class="n">Total PF 24%</th><th class="n">NCP</th></tr>';
+  rows.forEach(({e,p,pf})=>{h+=`<tr><td>${esc(e.id)}</td><td>${esc(e.name)}</td><td>${e.uan?esc(e.uan):'<span class="warn">missing</span>'}</td><td class="n">${inr(p.gross)}</td><td class="n"><input type="number" min="0" data-pfov="${esc(e.id)}" value="${pf.w}" style="width:90px;text-align:right${pf.hasOv?';background:#fff4d6':''}" title="${pf.hasOv?'Manually overridden':'Calculated: '+inr(pf.w)+' (PF-able '+inr(pf.raw)+')'}"></td><td class="n">${inr(pf.epsW)}</td><td class="n">${inr(pf.ee)}</td><td class="n">${inr(pf.er)}</td><td class="n">${inr(pf.eps)}</td><td class="n"><b>${inr(pf.ee+pf.er+pf.eps)}</b></td><td class="n">${pf.ncp}</td></tr>`;});
+  if(rows.length)h+=`<tr class="tot"><td></td><td>Total (${rows.length})</td><td></td><td class="n">${inr(rows.reduce((s,r)=>s+r.p.gross,0))}</td><td class="n">${inr(t.w)}</td><td class="n">${inr(t.epsW)}</td><td class="n">${inr(t.ee)}</td><td class="n">${inr(t.er)}</td><td class="n">${inr(t.eps)}</td><td class="n">${inr(t.ee+t.er+t.eps)}</td><td></td></tr>`;
+  else h+='<tr><td colspan="11" style="padding:24px;color:#6b7487">No PF members this month. Tick “PF applicable” on employees (or use Enable PF for all).</td></tr>';
   $('pfTbl').innerHTML=h;
   const due=addMonth(mk,1)+'-15',pd2=(D.pfPaid||{})[mk]||{};
-  $('pfChal').innerHTML=`<tr><th>Account</th><th class="n">Amount (₹)</th></tr><tr><td>A/c 01 — EPF (employee 12% + employer 3.67%)</td><td class="n">${inr(t.a01)}</td></tr><tr><td>A/c 02 — Admin charges (${f.adm}%, min ₹${inr(num(f.admMin))})</td><td class="n">${inr(t.a02)}</td></tr><tr><td>A/c 10 — EPS (8.33%)</td><td class="n">${inr(t.a10)}</td></tr><tr><td>A/c 21 — EDLI (${f.edli}%)</td><td class="n">${inr(t.a21)}</td></tr><tr><td>A/c 22 — EDLI admin</td><td class="n">0</td></tr><tr class="tot"><td>Total to pay by ${esc(dmy(due))}</td><td class="n">${inr(t.total)}</td></tr><tr><td colspan="2" class="msg">Employee share (deducted from pay): ₹${inr(t.ee)} · Company cost on top of salary: ₹${inr(t.total-t.ee)}</td></tr>`;
+  $('pfChal').innerHTML=`<tr><th>Account</th><th class="n">Amount (₹)</th></tr><tr><td>A/c 01 — EPF (employee 12% + employer 3.67%)</td><td class="n">${inr(t.a01)}</td></tr><tr><td>A/c 10 — EPS (employer 8.33%)</td><td class="n">${inr(t.a10)}</td></tr><tr class="tot"><td>Total PF (24%) to pay by ${esc(dmy(due))}</td><td class="n">${inr(t.total)}</td></tr><tr><td colspan="2" class="msg">Employee share (deducted from pay): ₹${inr(t.ee)} · Company cost on top of salary: ₹${inr(t.total-t.ee)}</td></tr>`;
   $('pfPaidDate').value=pd2.d||'';$('pfRef').value=pd2.ref||'';
 }
 $('pfMonth').onchange=ev=>{if(ev.target.value){pfMonth=ev.target.value;renderPF();}};
@@ -1955,11 +1955,11 @@ $('pfXls').onclick=async()=>{
   try{
     await loadXLSX();const mk=pfMonth,rows=pfRows(mk),t=pfTotals(rows,mk);
     if(!rows.length){alert('Nothing to export.');return;}
-    const head=['Employee ID','Name','UAN','Gross wages','EPF wages','EPS wages','EDLI wages','Employee EPF 12%','Employer EPF 3.67%','Employer EPS 8.33%','Total PF 24%','EDLI (employer)','NCP days'];
-    const body=rows.map(({e,p,pf})=>[e.id,e.name,e.uan||'',p.gross,pf.w,pf.epsW,pf.edliW,pf.ee,pf.er,pf.eps,pf.ee+pf.er+pf.eps,pf.edli,pf.ncp]);
-    const tot=['','TOTAL','',rows.reduce((s,r)=>s+r.p.gross,0),t.w,t.epsW,t.edliW,t.ee,t.er,t.eps,t.ee+t.er+t.eps,t.edli,''];
+    const head=['Employee ID','Name','UAN','Gross wages','EPF wages','EPS wages','Employee EPF 12%','Employer EPF 3.67%','Employer EPS 8.33%','Total PF 24%','NCP days'];
+    const body=rows.map(({e,p,pf})=>[e.id,e.name,e.uan||'',p.gross,pf.w,pf.epsW,pf.ee,pf.er,pf.eps,pf.ee+pf.er+pf.eps,pf.ncp]);
+    const tot=['','TOTAL','',rows.reduce((s,r)=>s+r.p.gross,0),t.w,t.epsW,t.ee,t.er,t.eps,t.ee+t.er+t.eps,''];
     const ws=XLSX.utils.aoa_to_sheet([head].concat(body,[tot]));ws['!cols']=head.map((h,i)=>({wch:i<3?16:13}));
-    const ch=[['Account','Amount (₹)'],['A/c 01 EPF (EE 12% + ER 3.67%)',t.a01],['A/c 02 Admin charges',t.a02],['A/c 10 EPS',t.a10],['A/c 21 EDLI',t.a21],['A/c 22 EDLI admin',0],['TOTAL',t.total],[],['Due date',dmy(addMonth(mk,1)+'-15')],['Employee share (from salary)',t.ee],['Company cost on top',t.total-t.ee]];
+    const ch=[['Account','Amount (₹)'],['A/c 01 EPF (EE 12% + ER 3.67%)',t.a01],['A/c 10 EPS (ER 8.33%)',t.a10],['TOTAL PF (24%)',t.total],[],['Due date',dmy(addMonth(mk,1)+'-15')],['Employee share (from salary)',t.ee],['Company cost on top',t.total-t.ee]];
     const wc=XLSX.utils.aoa_to_sheet(ch);wc['!cols']=[{wch:36},{wch:14}];
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'PF statement');XLSX.utils.book_append_sheet(wb,wc,'Challan summary');
     XLSX.writeFile(wb,`PF_Statement_${monthName(mk)}_${mk.slice(0,4)}.xlsx`);audit(`PF statement exported for ${mk}`);touch();
