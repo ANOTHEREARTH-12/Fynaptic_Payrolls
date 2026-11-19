@@ -170,6 +170,7 @@ dialog::backdrop{background:rgba(20,20,30,.45)}
       <button data-t="att" class="on">Attendance</button>
       <button data-t="emp">Employees</button>
       <button data-t="pay">Payslips</button>
+      <button data-t="pf">PF</button>
       <button data-t="my">My attendance</button>
       <button data-t="req">My requests</button>
       <button data-t="mypay">My payslips</button>
@@ -229,6 +230,18 @@ dialog::backdrop{background:rgba(20,20,30,.45)}
       <div class="msg" id="pdfMsg"></div>
       <div class="tw" style="margin-top:10px"><table class="t" id="payTbl"></table></div>
       <div class="msg">Select employees with the tick boxes and download one combined PDF (one page per employee), or use PDF on a row for a single slip. Slips use each employee's current salary structure.</div>
+    </section>
+
+    <!-- PF -->
+    <section class="sec" id="s-pf">
+      <div class="row" style="margin-bottom:10px">
+        <div><label style="margin:0 0 3px">Month</label><input type="month" id="pfMonth" style="width:170px"></div>
+        <div style="align-self:flex-end" class="row"><button class="primary" id="pfEcr">Export ECR (.txt)</button><button id="pfXls">Export Excel</button><button id="pfBulk">Enable PF for all active employees</button></div>
+      </div>
+      <div id="pfMsg"></div>
+      <div class="tw" style="margin-top:10px"><table class="t" id="pfTbl"></table></div>
+      <div class="card" style="margin-top:14px"><h2>Challan summary</h2><div class="tw"><table class="t" id="pfChal"></table></div>
+        <div class="row" style="margin-top:10px"><div><label style="margin:0 0 3px">Paid on</label><input type="date" id="pfPaidDate" style="width:160px"></div><div><label style="margin:0 0 3px">Payment reference (TRRN)</label><input type="text" id="pfRef" style="width:220px"></div><button id="pfPaidBtn" style="align-self:flex-end">Save payment</button><span class="msg" id="pfPaidMsg"></span></div></div>
     </section>
 
     <!-- DASHBOARD -->
@@ -322,6 +335,16 @@ dialog::backdrop{background:rgba(20,20,30,.45)}
             <div class="msg">People in these departments are hidden from Attendance and always paid in full (pro-rated only for joining / exit dates).</div>
             <div class="msg">Week-off changes apply to days that have not been edited manually.</div>
           </div>
+          <div class="card"><h2>Provident Fund (PF)</h2>
+            <label style="margin-top:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="pfOn" style="width:auto"> Enable PF calculation</label>
+            <label>PF applies from month</label><input type="month" id="pfFrom">
+            <label>Earnings counted as PF wages (comma-separated)</label><input type="text" id="pfHeads" placeholder="Basic, DA">
+            <label>Wage ceiling (one per line: effective-from date, amount)</label><textarea id="pfCeil" rows="3"></textarea>
+            <div class="two"><div><label>Employee %</label><input type="number" id="pfEE" step="0.01"></div><div><label>EPS % (employer)</label><input type="number" id="pfEPS" step="0.01"></div>
+            <div><label>EDLI %</label><input type="number" id="pfEDLI" step="0.01"></div><div><label>Admin %</label><input type="number" id="pfAdm" step="0.01"></div></div>
+            <label>Minimum admin charge (₹)</label><input type="number" id="pfAdmMin">
+            <div class="msg">Employee 12% is deducted automatically as “PF (Employee)” (a manual PF deduction line on the employee is replaced). The employer share, EDLI and admin are paid on top of salary. Months before the “applies from” month are not touched. Set UAN and “PF applicable” on each employee.</div>
+          </div>
           <div class="card"><h2>Public holidays</h2>
             <div class="row" style="flex-wrap:nowrap"><input type="date" id="holDate" style="width:150px"><input type="text" id="holName" placeholder="Holiday name"><button type="button" id="holAdd">Add</button></div>
             <div id="holList" style="margin-top:8px"></div>
@@ -398,6 +421,9 @@ dialog::backdrop{background:rgba(20,20,30,.45)}
     <div><label>Employment type</label><select id="fType"><option>Employee</option><option>Intern</option></select></div>
     <div><label>Title (Mr./Ms.)</label><select id="fSal"><option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Dr.</option></select></div>
     <div><label>Internship end date (interns)</label><input type="date" id="fEnd"></div>
+    <div><label>UAN (12 digits)</label><input type="text" id="fUan" maxlength="12" inputmode="numeric"></div>
+    <div><label>&nbsp;</label><label style="display:flex;gap:6px;align-items:center;margin:8px 0 0;color:var(--ink)"><input type="checkbox" id="fPf" style="width:auto"> PF applicable</label></div>
+    <div><label>&nbsp;</label><label style="display:flex;gap:6px;align-items:center;margin:8px 0 0;color:var(--ink)"><input type="checkbox" id="fNoEps" style="width:auto"> No EPS (not eligible)</label></div>
     <div><label>Date of birth</label><input type="date" id="fDob"></div>
     <div><label>Probation ends on</label><input type="date" id="fProb"></div>
     <div><label>&nbsp;</label><label style="display:flex;gap:6px;align-items:center;margin:8px 0 0;color:var(--ink)"><input type="checkbox" id="fConf" style="width:auto"> Confirmed</label></div>
@@ -595,7 +621,7 @@ async function encData(obj){const o=await encObj(dekKey,'',obj);return {v:2,iv:o
 const hasLogin=e=>mode==='demo'?!!((D.demoPw||{})[e.id]):!!WR[e.id];
 function noAtt(e){return (D.settings.noAttDepts||[]).some(x=>String(x).trim().toLowerCase()===String(e.dept||'').trim().toLowerCase());}
 const byId=(a,b)=>String(a.id).localeCompare(String(b.id),undefined,{numeric:true,sensitivity:'base'});
-function norm(){D.employees.sort(byId);D.settings.noAttDepts=D.settings.noAttDepts||['Board of Members'];D.notes=D.notes||{};D.requests=D.requests||[];D.pub=D.pub||{};D.holidays=D.holidays||[];D.locked=D.locked||{};D.snap=D.snap||{};D.audit=D.audit||[];hsKey=null;D.offer=Object.assign(defOffer(),D.offer||{});ensureLists();}
+function norm(){D.settings.pf=Object.assign({on:false,from:'',heads:'Basic',ceil:[{from:'2014-09-01',amt:15000},{from:'2026-09-17',amt:25000}],ee:12,eps:8.33,edli:0.5,adm:0.5,admMin:500},D.settings.pf||{});D.pfOv=D.pfOv||{};D.pfPaid=D.pfPaid||{};D.employees.sort(byId);D.settings.noAttDepts=D.settings.noAttDepts||['Board of Members'];D.notes=D.notes||{};D.requests=D.requests||[];D.pub=D.pub||{};D.holidays=D.holidays||[];D.locked=D.locked||{};D.snap=D.snap||{};D.audit=D.audit||[];hsKey=null;D.offer=Object.assign(defOffer(),D.offer||{});ensureLists();}
 async function loadRemote(){
   const f=await gh.get();
   if(!f){D=blank();WR={};sha=null;await newDek();dirty=true;return;}
@@ -731,6 +757,8 @@ function payLive(e,mk){
     if(ex.recover&&num(ex.recAmt)>0)ded.push(['Notice Pay Recovery',Math.round(num(ex.recAmt))]);
     if(num(ex.otherAmt)>0)ded.push([ex.otherName||'Other Recovery',Math.round(num(ex.otherAmt))]);
   }
+  const pfx=pfCore(e,mk,earn,c);
+  if(pfx){for(let i=ded.length-1;i>=0;i--)if(/provident|^\s*e?pf\b/i.test(ded[i][0]))ded.splice(i,1);if(pfx.ee>0)ded.push(['PF (Employee)',pfx.ee]);}
   const gross=earn.reduce((s,x)=>s+x[1],0),td=ded.reduce((s,x)=>s+x[1],0);
   return {c,earn,ded,gross,td,net:c.joined?gross-td:0};
 }
@@ -740,7 +768,7 @@ function tab(t){
   if(forceChange)t='prof';curTab=t;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   document.querySelectorAll('.sec').forEach(s=>s.classList.toggle('on',s.id==='s-'+t));
-  if(t==='att')renderAtt();if(t==='emp')renderEmp();if(t==='pay')renderPay();if(t==='set')renderSet();if(t==='my')renderMy();if(t==='req')renderReq();if(t==='mypay')renderMyPay();if(t==='prof')renderProf();if(t==='appr')renderAppr();if(t==='dash')renderDash();if(t==='cal')renderCal();if(t==='aud')renderAud();
+  if(t==='att')renderAtt();if(t==='emp')renderEmp();if(t==='pay')renderPay();if(t==='set')renderSet();if(t==='my')renderMy();if(t==='req')renderReq();if(t==='mypay')renderMyPay();if(t==='prof')renderProf();if(t==='appr')renderAppr();if(t==='dash')renderDash();if(t==='pf')renderPF();if(t==='cal')renderCal();if(t==='aud')renderAud();
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
 
@@ -862,7 +890,7 @@ function openDlg(e){
   const v=(id,val)=>$(id).value=val??'';
   v('fId',e?e.id:nextId());$('fId').readOnly=!!e;v('fName',e&&e.name);v('fGender',e?e.gender:'Male');fillSel('fDept',D.lists.depts,e&&e.dept,'depts');fillSel('fDesig',D.lists.desigs,e&&e.desig,'desigs');
   v('fDoj',e&&e.doj);v('fBank',e&&e.bank);v('fAcc',e&&e.acc);v('fPan',e&&e.pan);v('fReg',e?e.reg:'New Regime');
-  v('fOpen',e?e.openLeave:0);v('fOpenM',e?e.openMonth:ymOf(new Date()));v('fType',e?e.type||'Employee':'Employee');v('fSal',e?e.sal||'Mr.':'Mr.');v('fEnd',e&&e.end);fillMgr(e);v('fDob',e&&e.dob);v('fProb',e&&e.probEnd);$('fConf').checked=!!(e&&e.confirmed);
+  v('fOpen',e?e.openLeave:0);v('fOpenM',e?e.openMonth:ymOf(new Date()));v('fType',e?e.type||'Employee':'Employee');v('fSal',e?e.sal||'Mr.':'Mr.');v('fEnd',e&&e.end);fillMgr(e);v('fDob',e&&e.dob);v('fUan',e&&e.uan);$('fPf').checked=e?!!e.pf:!!(D.settings.pf&&D.settings.pf.on);$('fNoEps').checked=!!(e&&e.noEps);v('fProb',e&&e.probEnd);$('fConf').checked=!!(e&&e.confirmed);
   $('earnLines').innerHTML='';$('dedLines').innerHTML='';
   (e?e.earn:[{n:'Basic',a:''},{n:'HRA',a:''},{n:'Special Allowance',a:''}]).forEach(x=>lineRow('earnLines',x.n,x.a));
   (e?e.ded:[{n:'Salary Advance',a:0},{n:'TDS',a:0}]).forEach(x=>lineRow('dedLines',x.n,x.a));
@@ -883,7 +911,7 @@ $('empSave').onclick=()=>{
   let om=$('fOpenM').value||ymOf(new Date());
   const old=editing?D.employees.find(x=>x.id===editing):null;
   const rec=Object.assign({},old||{},{id,name,gender:$('fGender').value,dept:$('fDept').value.trim(),desig:$('fDesig').value.trim(),mgr:$('fMgr').value,doj,bank:$('fBank').value.trim(),
-    acc:$('fAcc').value.trim(),pan:$('fPan').value.trim().toUpperCase(),reg:$('fReg').value,openLeave:num($('fOpen').value),openMonth:om,earn,ded:readLines('dedLines'),type:$('fType').value,sal:$('fSal').value,end:$('fEnd').value,dob:$('fDob').value,probEnd:$('fProb').value,confirmed:$('fConf').checked});
+    acc:$('fAcc').value.trim(),pan:$('fPan').value.trim().toUpperCase(),reg:$('fReg').value,openLeave:num($('fOpen').value),openMonth:om,earn,ded:readLines('dedLines'),type:$('fType').value,sal:$('fSal').value,end:$('fEnd').value,dob:$('fDob').value,uan:$('fUan').value.replace(/\D/g,''),pf:$('fPf').checked,noEps:$('fNoEps').checked,probEnd:$('fProb').value,confirmed:$('fConf').checked});
   if(editing){const i=D.employees.findIndex(x=>x.id===editing);D.employees[i]=rec;}else D.employees.push(rec);
   D.employees.sort(byId);audit((editing?'Edited':'Added')+' employee '+name+' ('+id+')');touch();$('empDlg').close();renderEmp();
 };
@@ -1226,7 +1254,7 @@ function renderSet(){
   $('ofName').value=o.signName;$('ofCo').value=o.signCo;$('ofMob').value=o.signMob;$('ofMail').value=o.signMail;
   $('exR').value=o.exRelieve;$('exE').value=o.exExp;$('exI').value=o.exIntern;
   $('ofSigImg').style.display=o.sig?'':'none';if(o.sig)$('ofSigImg').src=o.sig;
-  renderLists();renderHol();
+  renderLists();renderHol();renderPFSet();
 }
 function renderLists(){
   const mk=(kind,box)=>{const used=x=>D.employees.filter(e=>(kind==='depts'?e.dept:e.desig)===x).length;
@@ -1388,12 +1416,17 @@ function renderMyPay(){
 $('myPayMonth').onchange=ev=>{if(ev.target.value){myPayMonth=ev.target.value;renderMyPay();}};
 
 /* --- profile + password */
+function pfYtd(e){
+  const now=new Date(),y=now.getMonth()>=3?now.getFullYear():now.getFullYear()-1;let s=0;
+  for(let k=0;k<12;k++){const mk=ymOf(new Date(y,3+k,1));if(mk>ymOf(now))break;const p=pay(e,mk),pf=pfCore(e,mk,p.earn,p.c);if(pf)s+=pf.ee;}
+  return s;
+}
 function renderProf(){
   const e=eById(me);if(!e)return;
   $('profBanner').innerHTML=forceChange?'<div class="banner">Please set a new password to continue.</div>':'';
   const mg=eById(e.mgr),row=(a,b)=>`<tr><td><b>${a}</b></td><td>${esc(b||'–')}</td></tr>`;
   const g=salaryFor(e,ymOf(new Date())).reduce((s,x)=>s+x.a,0);
-  $('profTbl').innerHTML=row('Employee ID',e.id)+row('Name',e.name)+row('Designation',e.desig)+row('Department',e.dept)+row('Reports to',mg&&mg.name)+row('Date of joining',dmy(e.doj))+row('Type',e.type||'Employee')+row('Bank',e.bank)+row('A/C #',e.acc)+row('PAN',e.pan)+row('Tax regime',e.reg)+row('Gross / month',inr(g))+(isMgr(e.id)?row('Team size',String(team(e.id).length)):'');
+  $('profTbl').innerHTML=row('Employee ID',e.id)+row('Name',e.name)+row('Designation',e.desig)+row('Department',e.dept)+row('Reports to',mg&&mg.name)+row('Date of joining',dmy(e.doj))+row('Type',e.type||'Employee')+row('Bank',e.bank)+row('A/C #',e.acc)+row('PAN',e.pan)+row('Tax regime',e.reg)+(e.pf?row('UAN',e.uan):'')+(e.pf?row('PF contributed this financial year (employee share)','₹'+inr(pfYtd(e))):'')+row('Gross / month',inr(g))+(isMgr(e.id)?row('Team size',String(team(e.id).length)):'');
 }
 $('pBtn').onclick=async()=>{
   const a=$('pNew').value,b=$('pNew2').value,m=$('pMsg');m.textContent='';
@@ -1551,6 +1584,7 @@ function renderDash(){
   const act=D.employees.filter(e=>!isRel(e)),pend=D.requests.filter(r=>r.st==='pending').length;
   const pm=addMonth(ymOf(new Date()),-1),noLogin=act.filter(e=>!hasLogin(e)).length;
   let cards=`<div><b>${act.length}</b><small>Active employees</small></div><div><b>${pend}</b><small>Pending requests</small></div><div><b>${noLogin}</b><small>Without a login</small></div>`;
+  if(D.settings.pf.on&&D.settings.pf.from&&pm>=D.settings.pf.from){const due=pd(addMonth(pm,1)+'-15'),n=dd(due),paid=(D.pfPaid||{})[pm];if(!paid)cards+=`<div><b>${n<0?'Overdue':n+' d'}</b><small>PF for ${monthName(pm)} due ${dmy(addMonth(pm,1)+'-15')}</small></div>`;const nu=act.filter(e=>e.pf&&!/^\d{12}$/.test(e.uan||'')).length;if(nu)cards+=`<div><b>${nu}</b><small>PF members without UAN</small></div>`;}
   const lst=(title,rows)=>`<div class="card"><h2>${title}</h2>${rows.length?rows.map(r=>`<div style="padding:4px 0;border-bottom:1px solid var(--line)">${r}</div>`).join(''):'<div class="msg" style="margin:0">Nothing upcoming.</div>'}</div>`;
   const bd=[],an=[],pr=[],it=[],np=[];
   act.forEach(e=>{
@@ -1728,12 +1762,112 @@ $('attXls').onclick=async()=>{
   }catch(e){setStatus('Export failed: '+e.message,'bad');alert('Export failed: '+e.message);}
 };
 
+/* ---------- Provident Fund (EPF / EPS / EDLI) ---------- */
+function pfCeils(){return (D.settings.pf.ceil||[]).slice().sort((a,b)=>a.from<b.from?-1:1);}
+function pfCap(mk){
+  const cs=pfCeils();if(!cs.length)return 15000;const n=mdays(mk);let sum=0;
+  for(let d=1;d<=n;d++){const iso=`${mk}-${pad2(d)}`;let a=cs[0].amt;cs.forEach(c=>{if(c.from<=iso)a=c.amt;});sum+=a;}
+  return Math.round(sum/n);
+}
+function pfCore(e,mk,earn,c){
+  const f=D.settings.pf;if(!f||!f.on||!e.pf||!f.from||mk<f.from||!c.joined)return null;
+  const heads=String(f.heads||'Basic').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+  const raw=earn.filter(x=>heads.includes(String(x[0]).toLowerCase())).reduce((s,x)=>s+x[1],0);
+  const ovr=((D.pfOv||{})[mk]||{})[e.id],hasOv=ovr!=null&&ovr!=='',cap=pfCap(mk);
+  const w=hasOv?Math.max(0,Math.round(+ovr)):Math.min(raw,cap);
+  const dob=pd(e.dob),me=new Date(+mk.slice(0,4),+mk.slice(5,7),0);let old=false;
+  if(dob){let a=me.getFullYear()-dob.getFullYear();if(me.getMonth()<dob.getMonth()||(me.getMonth()===dob.getMonth()&&me.getDate()<dob.getDate()))a--;old=a>=58;}
+  const noEps=!!e.noEps||old,r=x=>Math.round(x+1e-9);
+  const ee=r(w*f.ee/100),eps=noEps?0:r(w*f.eps/100);
+  return {raw,cap,w,epsW:noEps?0:w,edliW:w,ee,eps,er:ee-eps,edli:r(w*f.edli/100),ncp:Math.max(0,Math.min(31,Math.round(c.n-c.paid))),noEps,hasOv};
+}
+let pfMonth=addMonth(ymOf(new Date()),-1);
+function pfRows(mk){
+  const rows=[];
+  D.employees.forEach(e=>{if(!e.pf)return;const p=pay(e,mk),pf=pfCore(e,mk,p.earn,p.c);if(!pf)return;rows.push({e,p,pf});});
+  return rows;
+}
+function pfTotals(rows,mk){
+  const t={w:0,epsW:0,edliW:0,ee:0,eps:0,er:0,edli:0};rows.forEach(({pf})=>{t.w+=pf.w;t.epsW+=pf.epsW;t.edliW+=pf.edliW;t.ee+=pf.ee;t.eps+=pf.eps;t.er+=pf.er;t.edli+=pf.edli;});
+  const f=D.settings.pf;t.adm=rows.length?Math.max(num(f.admMin),Math.round(t.w*f.adm/100+1e-9)):0;
+  t.a01=t.ee+t.er;t.a02=t.adm;t.a10=t.eps;t.a21=t.edli;t.a22=0;t.total=t.a01+t.a02+t.a10+t.a21+t.a22;return t;
+}
+function renderPF(){
+  $('pfMonth').value=pfMonth;const f=D.settings.pf,mk=pfMonth;
+  if(!f.on||!f.from){$('pfMsg').innerHTML='<div class="banner">PF is switched off. Enable it in <b>Settings → Provident Fund</b> and choose the month it applies from.</div>';$('pfTbl').innerHTML='';$('pfChal').innerHTML='';return;}
+  if(mk<f.from){$('pfMsg').innerHTML=`<div class="msg">PF applies from ${esc(monthName(f.from))} ${f.from.slice(0,4)}.</div>`;$('pfTbl').innerHTML='';$('pfChal').innerHTML='';return;}
+  const rows=pfRows(mk),t=pfTotals(rows,mk),cap=pfCap(mk),bad=rows.filter(r=>!/^\d{12}$/.test(r.e.uan||''));
+  $('pfMsg').innerHTML=`<div class="msg" style="margin:0">Wage ceiling for ${esc(monthName(mk))}: <b>₹${inr(cap)}</b>${cap!==pfCap(addMonth(mk,-1))?' (changes this month — day-weighted; edit wages in the table if EPFO guidance differs)':''}. PF wages = ${esc(f.heads)} after LOP, capped. NCP days = LOP + days not employed.</div>`+(bad.length?`<div class="banner" style="margin-top:8px">${bad.length} member(s) have no valid 12-digit UAN: ${esc(bad.map(r=>r.e.name).join(', '))}</div>`:'');
+  let h='<tr><th>ID</th><th>Name</th><th>UAN</th><th class="n">Gross</th><th class="n">EPF wages</th><th class="n">EPS wages</th><th class="n">EDLI wages</th><th class="n">EE 12%</th><th class="n">EPS</th><th class="n">ER (EPF)</th><th class="n">EDLI</th><th class="n">NCP</th></tr>';
+  rows.forEach(({e,p,pf})=>{h+=`<tr><td>${esc(e.id)}</td><td>${esc(e.name)}</td><td>${e.uan?esc(e.uan):'<span class="warn">missing</span>'}</td><td class="n">${inr(p.gross)}</td><td class="n"><input type="number" min="0" data-pfov="${esc(e.id)}" value="${pf.w}" style="width:90px;text-align:right${pf.hasOv?';background:#fff4d6':''}" title="${pf.hasOv?'Manually overridden':'Calculated: '+inr(pf.w)+' (PF-able '+inr(pf.raw)+')'}"></td><td class="n">${inr(pf.epsW)}</td><td class="n">${inr(pf.edliW)}</td><td class="n">${inr(pf.ee)}</td><td class="n">${inr(pf.eps)}</td><td class="n">${inr(pf.er)}</td><td class="n">${inr(pf.edli)}</td><td class="n">${pf.ncp}</td></tr>`;});
+  if(rows.length)h+=`<tr class="tot"><td></td><td>Total (${rows.length})</td><td></td><td class="n">${inr(rows.reduce((s,r)=>s+r.p.gross,0))}</td><td class="n">${inr(t.w)}</td><td class="n">${inr(t.epsW)}</td><td class="n">${inr(t.edliW)}</td><td class="n">${inr(t.ee)}</td><td class="n">${inr(t.eps)}</td><td class="n">${inr(t.er)}</td><td class="n">${inr(t.edli)}</td><td></td></tr>`;
+  else h+='<tr><td colspan="12" style="padding:24px;color:#6b7487">No PF members this month. Tick “PF applicable” on employees (or use Enable PF for all).</td></tr>';
+  $('pfTbl').innerHTML=h;
+  const due=addMonth(mk,1)+'-15',pd2=(D.pfPaid||{})[mk]||{};
+  $('pfChal').innerHTML=`<tr><th>Account</th><th class="n">Amount (₹)</th></tr><tr><td>A/c 01 — EPF (employee 12% + employer 3.67%)</td><td class="n">${inr(t.a01)}</td></tr><tr><td>A/c 02 — Admin charges (${f.adm}%, min ₹${inr(num(f.admMin))})</td><td class="n">${inr(t.a02)}</td></tr><tr><td>A/c 10 — EPS (8.33%)</td><td class="n">${inr(t.a10)}</td></tr><tr><td>A/c 21 — EDLI (${f.edli}%)</td><td class="n">${inr(t.a21)}</td></tr><tr><td>A/c 22 — EDLI admin</td><td class="n">0</td></tr><tr class="tot"><td>Total to pay by ${esc(dmy(due))}</td><td class="n">${inr(t.total)}</td></tr><tr><td colspan="2" class="msg">Employee share (deducted from pay): ₹${inr(t.ee)} · Company cost on top of salary: ₹${inr(t.total-t.ee)}</td></tr>`;
+  $('pfPaidDate').value=pd2.d||'';$('pfRef').value=pd2.ref||'';
+}
+$('pfMonth').onchange=ev=>{if(ev.target.value){pfMonth=ev.target.value;renderPF();}};
+$('pfTbl').addEventListener('change',ev=>{
+  const i=ev.target.closest('[data-pfov]');if(!i)return;const id=i.dataset.pfov;
+  if(isLocked(pfMonth)){alert('This month is locked. Unlock it in Payslips first.');renderPF();return;}
+  D.pfOv=D.pfOv||{};const m=(D.pfOv[pfMonth]=D.pfOv[pfMonth]||{});
+  if(i.value==='')delete m[id];else m[id]=Math.max(0,Math.round(+i.value));
+  audit(`PF wages ${i.value===''?'override cleared':'overridden to '+i.value} for ${nmOf(id)} (${pfMonth})`);touch();renderPF();
+});
+$('pfPaidBtn').onclick=()=>{
+  D.pfPaid=D.pfPaid||{};
+  if(!$('pfPaidDate').value&&!$('pfRef').value.trim())delete D.pfPaid[pfMonth];else D.pfPaid[pfMonth]={d:$('pfPaidDate').value,ref:$('pfRef').value.trim()};
+  audit(`PF payment recorded for ${pfMonth}`);touch();$('pfPaidMsg').textContent='Saved ✓';setTimeout(()=>$('pfPaidMsg').textContent='',2000);
+};
+$('pfBulk').onclick=()=>{
+  const l=D.employees.filter(e=>!isRel(e)&&!e.pf&&e.type!=='Intern'&&!noAtt(e));
+  if(!l.length){alert('No eligible employees to enable (interns and no-attendance departments are skipped).');return;}
+  if(!confirm(`Enable PF for ${l.length} employee(s)?\n\n`+l.map(e=>e.name).join(', '))) return;
+  l.forEach(e=>{e.pf=true;});audit(`PF enabled for ${l.length} employee(s)`);touch();renderPF();
+};
+$('pfEcr').onclick=()=>{
+  const rows=pfRows(pfMonth).filter(r=>r.p.gross>0);if(!rows.length){alert('Nothing to export for this month.');return;}
+  const bad=rows.filter(r=>!/^\d{12}$/.test(r.e.uan||''));
+  if(bad.length&&!confirm(`${bad.length} member(s) have no valid UAN and will be skipped:\n${bad.map(r=>r.e.name).join(', ')}\n\nContinue?`))return;
+  const ok=rows.filter(r=>!bad.includes(r)),cl=s=>String(s).replace(/#|~/g,' ').replace(/\s+/g,' ').trim();
+  const txt=ok.map(({e,p,pf})=>[e.uan,cl(e.name),Math.round(p.gross),pf.w,pf.epsW,pf.edliW,pf.ee,pf.eps,pf.er,pf.ncp,0].join('#~#')).join('\n')+'\n';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));a.download=`ECR${monthName(pfMonth)}${pfMonth.slice(0,4)}.txt`;a.click();
+  audit(`ECR file exported for ${pfMonth} (${ok.length} members)`);touch();$('pfMsg').insertAdjacentHTML('beforeend','<div class="msg">ECR downloaded. Upload it on the EPFO Unified Portal; if validation rejects it, send me the error and I will adjust the format.</div>');
+};
+$('pfXls').onclick=async()=>{
+  try{
+    await loadXLSX();const mk=pfMonth,rows=pfRows(mk),t=pfTotals(rows,mk);
+    if(!rows.length){alert('Nothing to export.');return;}
+    const head=['Employee ID','Name','UAN','Gross wages','EPF wages','EPS wages','EDLI wages','EE share (12%)','EPS share','ER share (EPF)','EDLI (employer)','NCP days'];
+    const body=rows.map(({e,p,pf})=>[e.id,e.name,e.uan||'',p.gross,pf.w,pf.epsW,pf.edliW,pf.ee,pf.eps,pf.er,pf.edli,pf.ncp]);
+    const tot=['','TOTAL','',rows.reduce((s,r)=>s+r.p.gross,0),t.w,t.epsW,t.edliW,t.ee,t.eps,t.er,t.edli,''];
+    const ws=XLSX.utils.aoa_to_sheet([head].concat(body,[tot]));ws['!cols']=head.map((h,i)=>({wch:i<3?16:13}));
+    const ch=[['Account','Amount (₹)'],['A/c 01 EPF (EE 12% + ER 3.67%)',t.a01],['A/c 02 Admin charges',t.a02],['A/c 10 EPS',t.a10],['A/c 21 EDLI',t.a21],['A/c 22 EDLI admin',0],['TOTAL',t.total],[],['Due date',dmy(addMonth(mk,1)+'-15')],['Employee share (from salary)',t.ee],['Company cost on top',t.total-t.ee]];
+    const wc=XLSX.utils.aoa_to_sheet(ch);wc['!cols']=[{wch:36},{wch:14}];
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'PF statement');XLSX.utils.book_append_sheet(wb,wc,'Challan summary');
+    XLSX.writeFile(wb,`PF_Statement_${monthName(mk)}_${mk.slice(0,4)}.xlsx`);audit(`PF statement exported for ${mk}`);touch();
+  }catch(e){alert('Export failed: '+e.message);}
+};
+function renderPFSet(){
+  const f=D.settings.pf;$('pfOn').checked=!!f.on;$('pfFrom').value=f.from||'';$('pfHeads').value=f.heads||'';
+  $('pfCeil').value=pfCeils().map(c=>`${c.from}, ${c.amt}`).join('\n');
+  $('pfEE').value=f.ee;$('pfEPS').value=f.eps;$('pfEDLI').value=f.edli;$('pfAdm').value=f.adm;$('pfAdmMin').value=f.admMin;
+}
+function savePFSet(){
+  const f=D.settings.pf;f.on=$('pfOn').checked;f.from=$('pfFrom').value;f.heads=$('pfHeads').value;
+  f.ceil=$('pfCeil').value.split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(a=>/^\d{4}-\d{2}-\d{2}$/.test(a[0])&&num(a[1])>0).map(a=>({from:a[0],amt:num(a[1])}));
+  f.ee=num($('pfEE').value);f.eps=num($('pfEPS').value);f.edli=num($('pfEDLI').value);f.adm=num($('pfAdm').value);f.admMin=num($('pfAdmMin').value);
+  audit('PF settings changed');touch();
+}
+['pfOn','pfFrom','pfHeads','pfCeil','pfEE','pfEPS','pfEDLI','pfAdm','pfAdmMin'].forEach(id=>$(id).addEventListener('change',savePFSet));
+
 /* ---------- start ---------- */
 function start(){
   norm();
   $('login').style.display='none';$('app').style.display='';
   const mgr=role==='admin'||isMgr(me);
-  const show=role==='admin'?['dash','att','emp','pay','cal','appr','aud','set']:['my','req','mypay','prof'].concat(isMgr(me)?['cal','appr']:[]).filter(t=>!(t==='my'&&noAtt(eById(me)||{})));
+  const show=role==='admin'?['dash','att','emp','pay','pf','cal','appr','aud','set']:['my','req','mypay','prof'].concat(isMgr(me)?['cal','appr']:[]).filter(t=>!(t==='my'&&noAtt(eById(me)||{})));
   document.querySelectorAll('nav button').forEach(b=>b.style.display=show.includes(b.dataset.t)?'':'none');
   $('apprTab').textContent=role==='admin'?'Requests':'Approvals';$('apprH').textContent=role==='admin'?'Employee requests':'Team approvals';
   $('refreshBtn').style.display='';updApprBadge();
