@@ -300,6 +300,28 @@ dialog{border-radius:26px;background:rgba(255,255,255,.96)}
 #intro.hide{opacity:0;visibility:hidden}
 #intro img{width:230px;background:#fff;border-radius:18px;padding:16px 20px;animation:introPop 1s ease both}
 @keyframes introPop{from{opacity:0;transform:scale(.85) translateY(10px)}to{opacity:1;transform:none}}
+
+/* profile chip */
+.phead{display:flex;align-items:center;justify-content:space-between;gap:14px;position:relative;z-index:30}
+.phead .ph-l{min-width:0}
+#uchip{position:relative;flex:none}
+#uBtn{display:flex;align-items:center;gap:10px;padding:6px 12px 6px 6px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);color:#fff;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:background .2s,transform .2s;font-family:inherit}
+#uBtn:hover{background:rgba(255,255,255,.24);transform:translateY(-1px)}
+.uav{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#FF9D5C,#e8743b);color:#fff;display:grid;place-items:center;font:700 15px 'League Spartan',Inter,sans-serif;letter-spacing:.5px;box-shadow:0 0 0 2px rgba(255,255,255,.55)}
+.utx{display:flex;flex-direction:column;align-items:flex-start;line-height:1.15;text-align:left;max-width:200px}
+.utx b{font-size:14px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.utx small{font-size:11.5px;color:#d6cff0;margin-top:2px}
+.ucv{font-size:11px;color:#d6cff0;transition:transform .2s}
+#uBtn[aria-expanded=true] .ucv{transform:rotate(180deg)}
+#uMenu{display:none;position:absolute;right:0;top:calc(100% + 10px);min-width:210px;padding:8px;border-radius:18px;background:rgba(255,255,255,.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 18px 40px rgba(25,21,78,.28);border:1px solid rgba(114,78,174,.18)}
+#uMenu.open{display:block;animation:uPop .16s ease-out}
+@keyframes uPop{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+#uMenu .uh{padding:8px 10px 10px;border-bottom:1px solid #ece8f7;margin-bottom:6px}
+#uMenu .uh b{display:block;color:#19154E;font-size:14px}#uMenu .uh span{color:#6b7487;font-size:12px}
+#uMenu button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:9px 10px;font:500 14px Inter,sans-serif;color:#1E1933;cursor:pointer}
+#uMenu button:hover{background:#F6F4FF;color:#724EAE}
+#uMenu button.out{color:#c0392b}#uMenu button.out:hover{background:#fdecea;color:#c0392b}
+@media(max-width:720px){.utx,.ucv{display:none}#uBtn{padding:4px}.uav{width:36px;height:36px}}
 </style>
 </head>
 <body>
@@ -341,7 +363,8 @@ dialog{border-radius:26px;background:rgba(255,255,255,.96)}
   </header>
 
   <div class="wrap">
-    <div class="phead"><h1 id="pgT"></h1><p id="pgS"></p></div>
+    <div class="phead"><div class="ph-l"><h1 id="pgT"></h1><p id="pgS"></p></div>
+      <div id="uchip"><button id="uBtn" type="button" aria-haspopup="true" aria-expanded="false"><span class="uav" id="uAv"></span><span class="utx"><b id="uNm"></b><small id="uRl"></small></span><span class="ucv">▾</span></button><div id="uMenu" role="menu"></div></div></div>
     <!-- ATTENDANCE -->
     <section class="sec on" id="s-att">
       <div class="astats" id="attStats"></div>
@@ -2037,8 +2060,23 @@ function savePFSet(){
 ['pfOn','pfFrom','pfHeads','pfCeil','pfEE','pfEPS','pfEDLI','pfAdm','pfAdmMin'].forEach(id=>$(id).addEventListener('change',savePFSet));
 
 /* ---------- start ---------- */
+
+function chipInit(){
+  const adm=role==='admin',e=adm?null:(eById(me)||{});
+  const nm=adm?'HR / Admin':(e.name||me);
+  const rl=adm?'Administrator':(isMgr(me)?'Manager':'Employee')+(e.id?' · '+e.id:'');
+  const ini=adm?'HR':nm.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  $('uAv').textContent=ini;$('uNm').textContent=nm;$('uRl').textContent=rl;
+  const items=adm?[['Settings','set'],['Sign out','out']]:[['My profile','prof'],['Change password','pw'],['Sign out','out']];
+  $('uMenu').innerHTML='<div class="uh"><b>'+esc(nm)+'</b><span>'+esc(rl)+'</span></div>'+items.map(i=>'<button type="button" role="menuitem" data-a="'+i[1]+'"'+(i[1]==='out'?' class="out"':'')+'>'+i[0]+'</button>').join('');
+}
+function chipClose(){$('uMenu').classList.remove('open');$('uBtn').setAttribute('aria-expanded','false');}
+$('uBtn').onclick=ev=>{ev.stopPropagation();const o=$('uMenu').classList.toggle('open');$('uBtn').setAttribute('aria-expanded',o);};
+$('uMenu').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;const a=b.dataset.a;chipClose();
+  if(a==='out')$('logout').click();else if(a==='pw'){tab('prof');setTimeout(()=>{const p=$('pNew');if(p){p.scrollIntoView({block:'center'});p.focus();}},120);}else tab(a);};
+document.addEventListener('click',chipClose);document.addEventListener('keydown',ev=>{if(ev.key==='Escape')chipClose();});
 function start(){
-  norm();
+  norm();chipInit();
   $('login').style.display='none';$('app').style.display='';
   const mgr=role==='admin'||isMgr(me);
   const show=role==='admin'?['dash','att','emp','pay','pf','cal','appr','aud','set']:['my','req','mypay','prof'].concat(isMgr(me)?['cal','appr']:[]).filter(t=>!(t==='my'&&noAtt(eById(me)||{})));
